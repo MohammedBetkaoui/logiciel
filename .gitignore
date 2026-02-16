@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.vite/
+*.log
+
+# Build outputs
+release/
+*.exe
+*.blockmap
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+data/bbadata.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
