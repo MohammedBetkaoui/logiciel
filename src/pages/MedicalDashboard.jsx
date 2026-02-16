@@ -1,0 +1,385 @@
+// ─────────────────────────────────────────────────────────────────
+// BBA-Data – MedicalDashboard (Dashboard épidémiologique)
+// Graphiques Recharts : Radar, Line, Pie
+// Analyse statistique des bilans – Institut BBA
+// ─────────────────────────────────────────────────────────────────
+
+import React, { useState, useEffect } from 'react';
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
+  PieChart, Pie, Cell,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  Activity,
+  Users,
+  FileText,
+  AlertTriangle,
+  CalendarDays,
+  ShieldAlert,
+  TrendingUp,
+  Download,
+} from 'lucide-react';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import ClinicalAlerts from '../components/medical/ClinicalAlerts';
+import {
+  getDashboardStats,
+  getAnomalies,
+  getPioHistory,
+  getDemographics,
+  getActiveAlerts,
+  exportAnonymisedCSV,
+} from '../services/api';
+
+// ─── Couleurs du thème médical ───────────────────────────────
+const COLORS = {
+  blue: '#3b82f6',
+  emerald: '#10b981',
+  amber: '#f59e0b',
+  red: '#ef4444',
+  violet: '#8b5cf6',
+  cyan: '#06b6d4',
+  rose: '#f43f5e',
+  slate: '#64748b',
+};
+
+const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
+
+// ─── Valeurs par défaut (pas de données) ─────────────────────
+const EMPTY_STATS = {
+  total_patients: 0,
+  total_examens: 0,
+  alertes_actives: 0,
+  examens_ce_mois: 0,
+};
+
+
+// ─── Composant StatCard ──────────────────────────────────────
+function StatCard({ icon: Icon, label, value, color, subtext }) {
+  return (
+    <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
+            {label}
+          </p>
+          <p className="text-2xl font-bold text-neutral-800 dark:text-neutral-100 mt-1">
+            {value}
+          </p>
+          {subtext && (
+            <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">{subtext}</p>
+          )}
+        </div>
+        <div className={`p-2.5 rounded-lg ${color}`}>
+          <Icon size={20} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Tooltip personnalisé ────────────────────────────────────
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg p-3 text-xs">
+      <p className="font-semibold text-neutral-700 dark:text-neutral-200 mb-1">{label}</p>
+      {payload.map((entry, i) => (
+        <p key={i} style={{ color: entry.color }} className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
+          {entry.name}: <strong>{entry.value}</strong>
+          {entry.name.includes('PIO') ? ' mmHg' : ''}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// COMPOSANT PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
+
+export default function MedicalDashboard() {
+  const [stats, setStats] = useState(EMPTY_STATS);
+  const [anomalies, setAnomalies] = useState([]);
+  const [pioData, setPioData] = useState([]);
+  const [demographics, setDemographics] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(false);
+
+  // Charger les données depuis l'API si disponible
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [s, a, p, d, al] = await Promise.all([
+          getDashboardStats(),
+          getAnomalies(),
+          getPioHistory(),
+          getDemographics(),
+          getActiveAlerts(),
+        ]);
+        setStats(s);
+        setAnomalies(a);
+        setPioData(p);
+        setDemographics(d);
+        setAlerts(al);
+        setBackendOnline(true);
+      } catch {
+        // Utilise les données de démo
+        setBackendOnline(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  // Export CSV anonymisé (RGPD)
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      const csv = await exportAnonymisedCSV();
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bbadata_anonyme_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail in demo mode
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Transform demographics for pie chart
+  const pieData = demographics.reduce((acc, d) => {
+    const existing = acc.find((x) => x.name === d.tranche_age);
+    if (existing) {
+      existing.value += d.count;
+    } else {
+      acc.push({ name: d.tranche_age, value: d.count });
+    }
+    return acc;
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      {/* ─── Header ───────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
+            Dashboard Épidémiologique
+          </h1>
+          <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
+            Synthèse des bilans optométriques – Institut BBA – Données{' '}
+            {backendOnline ? (
+              <span className="text-emerald-500 font-medium">en direct</span>
+            ) : (
+              <span className="text-amber-500 font-medium">hors ligne</span>
+            )}
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          icon={Download}
+          size="sm"
+          onClick={handleExportCSV}
+          isLoading={isExporting}
+          aria-label="Exporter les données anonymisées en CSV"
+        >
+          Export RGPD
+        </Button>
+      </div>
+
+      {/* ─── Stat Cards ───────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={Users}
+          label="Patients"
+          value={stats.total_patients}
+          color="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+          subtext="Population dépistée"
+        />
+        <StatCard
+          icon={FileText}
+          label="Bilans"
+          value={stats.total_examens}
+          color="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+          subtext="Fiches cliniques collectées"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Pathologies détectées"
+          value={stats.alertes_actives}
+          color="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+          subtext="PIO > 21 mmHg / Réf. ophtalmo"
+        />
+        <StatCard
+          icon={CalendarDays}
+          label="Ce mois"
+          value={stats.examens_ce_mois}
+          color="bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"
+          subtext="Bilans de dépistage"
+        />
+      </div>
+
+      {/* ─── Charts Row 1: Radar + PIO Line ───────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Radar Chart – Répartition des anomalies */}
+        <Card
+          title="Prévalence des anomalies"
+          description="Distribution épidémiologique des pathologies détectées"
+          icon={Activity}
+        >
+          <div className="mt-3 -mx-2" role="img" aria-label="Graphique radar des anomalies visuelles">
+            <ResponsiveContainer width="100%" height={280}>
+              <RadarChart data={anomalies} cx="50%" cy="50%" outerRadius="70%">
+                <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+                <PolarAngleAxis
+                  dataKey="anomalie"
+                  tick={{ fontSize: 10, fill: '#6b7280' }}
+                  className="dark:[&_text]:fill-neutral-400"
+                />
+                <PolarRadiusAxis
+                  tick={{ fontSize: 9, fill: '#9ca3af' }}
+                  domain={[0, 'auto']}
+                  className="dark:[&_text]:fill-neutral-500"
+                />
+                <Radar
+                  name="Cas détectés"
+                  dataKey="count"
+                  stroke={COLORS.blue}
+                  fill={COLORS.blue}
+                  fillOpacity={0.2}
+                  strokeWidth={2}
+                />
+                <Tooltip content={<CustomTooltip />} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Line Chart – Évolution PIO */}
+        <Card
+          title="Évolution de la PIO"
+          description="Pression intraoculaire (mmHg) – Seuil: 21 mmHg"
+          icon={TrendingUp}
+        >
+          <div className="mt-3 -mx-2" role="img" aria-label="Graphique évolution de la pression intraoculaire">
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={pioData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" className="dark:[&>line]:stroke-neutral-700" />
+                <XAxis
+                  dataKey="patient"
+                  tick={{ fontSize: 10, fill: '#6b7280' }}
+                  angle={-20}
+                  textAnchor="end"
+                  height={50}
+                  className="dark:[&_text]:fill-neutral-400"
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                  domain={[8, 30]}
+                  label={{
+                    value: 'mmHg',
+                    angle: -90,
+                    position: 'insideLeft',
+                    style: { fontSize: 10, fill: '#9ca3af' },
+                  }}
+                  className="dark:[&_text]:fill-neutral-500"
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  wrapperStyle={{ fontSize: 11 }}
+                />
+                <ReferenceLine
+                  y={21}
+                  stroke={COLORS.red}
+                  strokeDasharray="4 4"
+                  label={{
+                    value: 'Seuil 21 mmHg',
+                    position: 'right',
+                    style: { fontSize: 10, fill: COLORS.red },
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="pio_od"
+                  name="PIO OD"
+                  stroke={COLORS.blue}
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: COLORS.blue }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="pio_og"
+                  name="PIO OG"
+                  stroke={COLORS.emerald}
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: COLORS.emerald }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      {/* ─── Charts Row 2: Demographics + Alerts ──────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Pie Chart – Démographie */}
+        <Card
+          title="Segmentation démographique"
+          description="Répartition par tranche d'âge – population dépistée"
+          icon={Users}
+        >
+          <div className="mt-3 flex items-center justify-center" role="img" aria-label="Graphique répartition démographique">
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={90}
+                  paddingAngle={3}
+                  dataKey="value"
+                  label={({ name, percent }) =>
+                    `${name} (${(percent * 100).toFixed(0)}%)`
+                  }
+                  labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                  className="dark:[&_text]:fill-neutral-400"
+                >
+                  {pieData.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={PIE_COLORS[i % PIE_COLORS.length]}
+                      stroke="transparent"
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Alertes cliniques actives */}
+        <Card
+          title="Alertes cliniques actives"
+          description="Patients nécessitant une attention (ISO 14971)"
+          icon={ShieldAlert}
+        >
+          <ClinicalAlerts alerts={alerts} />
+        </Card>
+      </div>
+    </div>
+  );
+}
