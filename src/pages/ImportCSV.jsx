@@ -127,6 +127,34 @@ export default function ImportCSV() {
 
     for (const row of parsed.rows) {
       try {
+        // ── Helper: safe float parser (0 stays 0, empty/NaN → null)
+        const safeFloat = (val) => {
+          if (val === null || val === undefined || val === '') return null;
+          const v = parseFloat(val);
+          return isNaN(v) ? null : v;
+        };
+
+        // ── Normalize sexe: "Homme" → "M", "Femme" → "F", else "Autre"
+        const sexeMap = { homme: 'M', masculin: 'M', m: 'M', femme: 'F', feminin: 'F', féminin: 'F', f: 'F' };
+        const normalizedSexe = sexeMap[(row.sexe || '').toLowerCase().trim()] || 'Autre';
+
+        // ── Normalize date_naissance: DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY → YYYY-MM-DD
+        let normalizedDate = (row.date_naissance || '').trim();
+        // DD/MM/YYYY or DD-MM-YYYY
+        if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(normalizedDate)) {
+          const [dd, mm, yyyy] = normalizedDate.split(/[\/\-]/);
+          normalizedDate = `${yyyy}-${mm}-${dd}`;
+        }
+        // DD MM YYYY (espaces)
+        else if (/^\d{2}\s+\d{2}\s+\d{4}$/.test(normalizedDate)) {
+          const [dd, mm, yyyy] = normalizedDate.split(/\s+/);
+          normalizedDate = `${yyyy}-${mm}-${dd}`;
+        }
+        // YYYY/MM/DD or YYYY-MM-DD already OK
+        else if (/^\d{4}[\/\-]\d{2}[\/\-]\d{2}$/.test(normalizedDate)) {
+          normalizedDate = normalizedDate.replace(/\//g, '-');
+        }
+
         // Step 1: Create patient
         const patientRes = await fetch('http://localhost:8000/api/patients', {
           method: 'POST',
@@ -134,12 +162,12 @@ export default function ImportCSV() {
           body: JSON.stringify({
             nom: row.nom,
             prenom: row.prenom,
-            date_naissance: row.date_naissance,
-            sexe: row.sexe,
+            date_naissance: normalizedDate,
+            sexe: normalizedSexe,
             telephone: row.telephone || null,
             email: row.email || null,
             ville: row.ville || null,
-            consentement_rgpd: true,
+            consentement_rgpd: 1,
           }),
         });
         if (!patientRes.ok) {
@@ -149,6 +177,26 @@ export default function ImportCSV() {
         }
         const patient = await patientRes.json();
 
+        // ── Helper: parse AV values like "6 oct" → 0.6, "10 oct" → 1.0, or plain "0.8" → 0.8
+        const parseAV = (val) => {
+          if (!val || val === '') return null;
+          const s = val.toString().trim().toLowerCase();
+          // Format "X oct" or "X/10" → value / 10
+          const octMatch = s.match(/^(\d+(?:\.\d+)?)\s*(?:oct|dixième|dixiemes?|\/\s*10)/);
+          if (octMatch) {
+            const v = parseFloat(octMatch[1]) / 10;
+            return isNaN(v) ? null : v;
+          }
+          // Fraction like "6/10"
+          const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+          if (fracMatch) {
+            const v = parseFloat(fracMatch[1]) / parseFloat(fracMatch[2]);
+            return isNaN(v) ? null : v;
+          }
+          const v = parseFloat(s);
+          return isNaN(v) ? null : v;
+        };
+
         // Step 2: Create examen with all clinical data
         const examenData = {
           patient_id: patient.patient_id,
@@ -157,34 +205,34 @@ export default function ImportCSV() {
           antecedents_oculaires: row.antecedents_oculaires || '',
           antecedents_generaux: row.antecedents_generaux || '',
           port_actuel: row.port_actuel || '',
-          // AV
-          av_od_sc: parseFloat(row.av_od_sc) || null,
-          av_og_sc: parseFloat(row.av_og_sc) || null,
-          av_od_ac: parseFloat(row.av_od_ac) || null,
-          av_og_ac: parseFloat(row.av_og_ac) || null,
-          av_binoculaire: parseFloat(row.av_binoculaire) || null,
+          // AV (handle "6 oct" = 6/10 = 0.6 format)
+          av_od_sc: parseAV(row.av_od_sc),
+          av_og_sc: parseAV(row.av_og_sc),
+          av_od_ac: parseAV(row.av_od_ac),
+          av_og_ac: parseAV(row.av_og_ac),
+          av_binoculaire: parseAV(row.av_binoculaire),
           // Autorefraction
-          auto_od_sphere: parseFloat(row.auto_od_sphere) || null,
-          auto_od_cylindre: parseFloat(row.auto_od_cylindre) || null,
-          auto_od_axe: parseFloat(row.auto_od_axe) || null,
-          auto_og_sphere: parseFloat(row.auto_og_sphere) || null,
-          auto_og_cylindre: parseFloat(row.auto_og_cylindre) || null,
-          auto_og_axe: parseFloat(row.auto_og_axe) || null,
+          auto_od_sphere: safeFloat(row.auto_od_sphere),
+          auto_od_cylindre: safeFloat(row.auto_od_cylindre),
+          auto_od_axe: safeFloat(row.auto_od_axe),
+          auto_og_sphere: safeFloat(row.auto_og_sphere),
+          auto_og_cylindre: safeFloat(row.auto_og_cylindre),
+          auto_og_axe: safeFloat(row.auto_og_axe),
           // Subjective refraction
-          rx_od_sphere: parseFloat(row.rx_od_sphere) || null,
-          rx_od_cylindre: parseFloat(row.rx_od_cylindre) || null,
-          rx_od_axe: parseFloat(row.rx_od_axe) || null,
-          rx_od_addition: parseFloat(row.rx_od_addition) || null,
-          rx_og_sphere: parseFloat(row.rx_og_sphere) || null,
-          rx_og_cylindre: parseFloat(row.rx_og_cylindre) || null,
-          rx_og_axe: parseFloat(row.rx_og_axe) || null,
-          rx_og_addition: parseFloat(row.rx_og_addition) || null,
+          rx_od_sphere: safeFloat(row.rx_od_sphere),
+          rx_od_cylindre: safeFloat(row.rx_od_cylindre),
+          rx_od_axe: safeFloat(row.rx_od_axe),
+          rx_od_addition: safeFloat(row.rx_od_addition),
+          rx_og_sphere: safeFloat(row.rx_og_sphere),
+          rx_og_cylindre: safeFloat(row.rx_og_cylindre),
+          rx_og_axe: safeFloat(row.rx_og_axe),
+          rx_og_addition: safeFloat(row.rx_og_addition),
           // Measures
-          dp_od: parseFloat(row.dp_od) || null,
-          dp_og: parseFloat(row.dp_og) || null,
-          dp_binoculaire: parseFloat(row.dp_binoculaire) || null,
-          pio_od: parseFloat(row.pio_od) || null,
-          pio_og: parseFloat(row.pio_og) || null,
+          dp_od: safeFloat(row.dp_od),
+          dp_og: safeFloat(row.dp_og),
+          dp_binoculaire: safeFloat(row.dp_binoculaire),
+          pio_od: safeFloat(row.pio_od),
+          pio_og: safeFloat(row.pio_og),
           diagnostic: row.diagnostic || '',
           observations: row.observations || '',
         };

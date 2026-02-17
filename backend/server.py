@@ -240,8 +240,18 @@ async def create_examen(examen: ExamenCreate):
     if not patient:
         raise HTTPException(404, "Patient non trouvé")
 
-    # Calcul de l'âge
-    naissance = datetime.strptime(patient["date_naissance"], "%Y-%m-%d").date()
+    # Calcul de l'âge (support multiple date formats)
+    date_str = patient["date_naissance"]
+    naissance = None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d %m %Y"):
+        try:
+            naissance = datetime.strptime(date_str.strip(), fmt).date()
+            break
+        except (ValueError, AttributeError):
+            continue
+    if naissance is None:
+        # Fallback: assume age 30 if date unparseable
+        naissance = date.today().replace(year=date.today().year - 30)
     today = date.today()
     age = today.year - naissance.year - ((today.month, today.day) < (naissance.month, naissance.day))
 
