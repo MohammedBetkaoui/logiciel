@@ -11,6 +11,8 @@ import {
   Heart,
   FileUp,
   BarChart3,
+  BookOpen,
+  HelpCircle,
 } from 'lucide-react';
 
 const navSections = [
@@ -33,8 +35,10 @@ const navSections = [
     title: 'Analyse',
     items: [
       { id: 'statistical-analysis', label: 'Analyse statistique', icon: BarChart3 },
+      { id: 'guide-statistiques', label: 'Guide des statistiques', icon: HelpCircle },
       { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
       { id: 'analysis', label: 'Analyse Python', icon: FlaskConical },
+      { id: 'normes', label: 'Référentiel normatif', icon: BookOpen },
       { id: 'settings', label: 'Paramètres', icon: Settings },
     ],
   },

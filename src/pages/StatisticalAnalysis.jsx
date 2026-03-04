@@ -5,11 +5,14 @@
 // Conforme ISO 13666:2019 / AAO Preferred Practice Patterns
 // ─────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell,
   LineChart, Line,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ScatterChart, Scatter, ZAxis,
   ResponsiveContainer,
 } from 'recharts';
 import {
@@ -22,6 +25,12 @@ import {
   Download,
   RefreshCw,
   Filter,
+  X,
+  Maximize2,
+  Activity,
+  Crosshair,
+  Gauge,
+  Glasses,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -84,10 +93,39 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function StatisticalAnalysis() {
+export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }) {
   const [bilans, setBilans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ sexe: 'all', tranche: 'all' });
+  const [expandedCard, setExpandedCard] = useState(null);
+  const modalRef = useRef(null);
+
+  // Auto-expand card when navigated from guide page
+  useEffect(() => {
+    if (targetCard && !loading) {
+      setExpandedCard(targetCard);
+      if (onTargetCardConsumed) onTargetCardConsumed();
+    }
+  }, [targetCard, loading, onTargetCardConsumed]);
+
+  // Scroll main container to top on open & lock scroll
+  useEffect(() => {
+    const mainEl = document.querySelector('main');
+    if (expandedCard) {
+      if (mainEl) {
+        mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+        mainEl.style.overflow = 'hidden';
+      }
+      document.body.style.overflow = 'hidden';
+    } else {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+    return () => {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, [expandedCard]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -200,6 +238,94 @@ export default function StatisticalAnalysis() {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
+
+  // ─── NEW: Astigmatisme Pie Data ──────────────────────────
+  const astigTotal = Object.values(astigmatismeCount).reduce((a, b) => a + b, 0);
+  const astigPieData = Object.entries(astigmatismeCount)
+    .filter(([, v]) => v > 0)
+    .map(([name, value]) => ({ name, value, pct: astigTotal ? ((value / astigTotal) * 100).toFixed(1) : 0 }));
+
+  // ─── NEW: PIO Distribution ──────────────────────────────
+  const pioBuckets = { '< 10': 0, '10-15': 0, '15-18': 0, '18-21': 0, '21-25': 0, '25-30': 0, '> 30': 0 };
+  for (const b of filtered) {
+    for (const pio of [parseFloat(b.pio_od), parseFloat(b.pio_og)]) {
+      if (isNaN(pio)) continue;
+      if (pio < 10) pioBuckets['< 10']++;
+      else if (pio < 15) pioBuckets['10-15']++;
+      else if (pio < 18) pioBuckets['15-18']++;
+      else if (pio < 21) pioBuckets['18-21']++;
+      else if (pio < 25) pioBuckets['21-25']++;
+      else if (pio < 30) pioBuckets['25-30']++;
+      else pioBuckets['> 30']++;
+    }
+  }
+  const pioDistData = Object.entries(pioBuckets)
+    .map(([name, value]) => ({ name: `${name} mmHg`, value }))
+    .filter((d) => d.value > 0);
+
+  // ─── NEW: Acuité Visuelle moyenne SC vs AC ──────────────
+  let sumAvOdSc = 0, sumAvOgSc = 0, sumAvOdAc = 0, sumAvOgAc = 0;
+  let countAvSc = 0, countAvAc = 0;
+  for (const b of filtered) {
+    const odsc = parseFloat(b.av_od_sc), ogsc = parseFloat(b.av_og_sc);
+    const odac = parseFloat(b.av_od_ac), ogac = parseFloat(b.av_og_ac);
+    if (!isNaN(odsc) && !isNaN(ogsc)) { sumAvOdSc += odsc; sumAvOgSc += ogsc; countAvSc++; }
+    if (!isNaN(odac) && !isNaN(ogac)) { sumAvOdAc += odac; sumAvOgAc += ogac; countAvAc++; }
+  }
+  const avData = [
+    { name: 'OD SC', value: countAvSc ? +(sumAvOdSc / countAvSc).toFixed(2) : 0 },
+    { name: 'OG SC', value: countAvSc ? +(sumAvOgSc / countAvSc).toFixed(2) : 0 },
+    { name: 'OD AC', value: countAvAc ? +(sumAvOdAc / countAvAc).toFixed(2) : 0 },
+    { name: 'OG AC', value: countAvAc ? +(sumAvOgAc / countAvAc).toFixed(2) : 0 },
+  ];
+
+  // ─── NEW: Anisométropie (diff ES OD-OG) ────────────────
+  const anisoData = { 'Normal (< 1D)': 0, 'Légère (1-2D)': 0, 'Significative (> 2D)': 0 };
+  let anisoCount = 0;
+  for (const b of filtered) {
+    const esOd = calcES(b.rx_od_sphere, b.rx_od_cylindre);
+    const esOg = calcES(b.rx_og_sphere, b.rx_og_cylindre);
+    if (esOd !== null && esOg !== null) {
+      const diff = Math.abs(esOd - esOg);
+      if (diff < 1) anisoData['Normal (< 1D)']++;
+      else if (diff <= 2) anisoData['Légère (1-2D)']++;
+      else { anisoData['Significative (> 2D)']++; anisoCount++; }
+    }
+  }
+  const anisoChartData = Object.entries(anisoData)
+    .map(([name, value]) => ({ name, value }))
+    .filter((d) => d.value > 0);
+
+  // ─── NEW: Presbytie par tranche d'âge ──────────────────
+  const presbyByAge = {};
+  for (const b of filtered) {
+    const t = getTrancheAge(b.date_naissance);
+    if (!presbyByAge[t]) presbyByAge[t] = { tranche: t, presbyte: 0, nonPresbye: 0 };
+    if (parseFloat(b.rx_od_addition) > 0 || parseFloat(b.rx_og_addition) > 0) {
+      presbyByAge[t].presbyte++;
+    } else {
+      presbyByAge[t].nonPresbye++;
+    }
+  }
+  const presbyByAgeData = Object.values(presbyByAge).sort((a, b) => {
+    const order = ['0-9 ans', '10-19 ans', '20-29 ans', '30-39 ans', '40-49 ans', '50-59 ans', '60+ ans', 'Inconnu'];
+    return order.indexOf(a.tranche) - order.indexOf(b.tranche);
+  });
+
+  // ─── NEW: Distribution des axes de cylindre ────────────
+  const axeBuckets = { '0-30°': 0, '31-60°': 0, '61-90°': 0, '91-120°': 0, '121-150°': 0, '151-180°': 0 };
+  for (const b of filtered) {
+    for (const axe of [parseInt(b.rx_od_axe), parseInt(b.rx_og_axe)]) {
+      if (isNaN(axe)) continue;
+      if (axe <= 30) axeBuckets['0-30°']++;
+      else if (axe <= 60) axeBuckets['31-60°']++;
+      else if (axe <= 90) axeBuckets['61-90°']++;
+      else if (axe <= 120) axeBuckets['91-120°']++;
+      else if (axe <= 150) axeBuckets['121-150°']++;
+      else axeBuckets['151-180°']++;
+    }
+  }
+  const axeData = Object.entries(axeBuckets).map(([subject, count]) => ({ subject, count }));
 
   // Available tranches for filter
   const availableTranches = [...new Set(bilans.map((b) => getTrancheAge(b.date_naissance)))].sort();
@@ -320,96 +446,564 @@ export default function StatisticalAnalysis() {
         ))}
       </div>
 
+      {/* ─── Expanded Card Modal ─────────────────────────── */}
+      {expandedCard && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+          onClick={() => setExpandedCard(null)}
+        >
+          <div
+            ref={modalRef}
+            className="relative bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-[90vw] max-w-5xl max-h-[90vh] overflow-y-auto p-8 animate-[scaleIn_0.25s_ease-out]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setExpandedCard(null)}
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="mb-6">
+              <h2 className="text-lg font-bold text-neutral-800 dark:text-neutral-100">
+                {expandedCard === 'prevalence' && 'Prévalence des amétropies'}
+                {expandedCard === 'demographics' && 'Segmentation démographique'}
+                {expandedCard === 'gender' && 'Répartition par sexe'}
+                {expandedCard === 'motifs' && 'Motifs de consultation'}
+                {expandedCard === 'refraction' && 'Moyennes de réfraction'}
+                {expandedCard === 'astigmatisme' && 'Distribution de l\'astigmatisme'}
+                {expandedCard === 'pio-dist' && 'Distribution de la PIO'}
+                {expandedCard === 'acuite' && 'Acuité visuelle moyenne'}
+                {expandedCard === 'anisometropie' && 'Analyse de l\'anisométropie'}
+                {expandedCard === 'presbytie-age' && 'Presbytie par tranche d\'âge'}
+                {expandedCard === 'axes' && 'Distribution des axes de cylindre'}
+              </h2>
+              <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
+                {expandedCard === 'prevalence' && 'Classification ISO 13666:2019 (ES = SPH + CYL/2)'}
+                {expandedCard === 'demographics' && 'Répartition par tranche d\'âge'}
+                {expandedCard === 'gender' && 'Distribution H/F de la population consultante'}
+                {expandedCard === 'motifs' && 'Les motifs les plus fréquents – Optimisation du dépistage'}
+                {expandedCard === 'refraction' && 'Calculs automatiques ES (ISO 13666:2019)'}
+                {expandedCard === 'astigmatisme' && 'Répartition léger / modéré / fort (CYL ≥ 0.5 D)'}
+                {expandedCard === 'pio-dist' && 'Histogramme des valeurs PIO (mmHg) – Seuil AAO PPP'}
+                {expandedCard === 'acuite' && 'Comparaison sans correction (SC) vs avec correction (AC) – ISO 8596'}
+                {expandedCard === 'anisometropie' && 'Différence d\'ES entre OD et OG – ISO 14971'}
+                {expandedCard === 'presbytie-age' && 'Taux de presbytie par groupe d\'âge (addition > 0)'}
+                {expandedCard === 'axes' && 'Orientation de l\'astigmatisme (0–180°)'}
+              </p>
+            </div>
+
+            {/* Prevalence expanded */}
+            {expandedCard === 'prevalence' && (
+              <>
+                <ResponsiveContainer width="100%" height={480}>
+                  <BarChart data={prevalenceData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                    <XAxis type="number" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                    <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Bar dataKey="value" name="Nombre de cas" radius={[0, 6, 6, 0]}>
+                      {prevalenceData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {prevalenceData.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm bg-neutral-50 dark:bg-neutral-700/50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                        <span className="text-neutral-600 dark:text-neutral-300">{p.name}</span>
+                      </div>
+                      <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-200">{p.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Demographics expanded */}
+            {expandedCard === 'demographics' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={demoData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="value" name="Patients" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Gender expanded */}
+            {expandedCard === 'gender' && (
+              <div className="flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={480}>
+                  <PieChart>
+                    <Pie
+                      data={genderData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={160}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name === 'M' ? 'Masculin' : name === 'F' ? 'Féminin' : name} (${(percent * 100).toFixed(0)}%)`}
+                      className="dark:[&_text]:fill-neutral-400"
+                    >
+                      {genderData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Motifs expanded */}
+            {expandedCard === 'motifs' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={motifData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis type="number" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="value" name="Nb consultations" fill="#8b5cf6" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Refraction expanded */}
+            {expandedCard === 'refraction' && (
+              <>
+                <table className="w-full text-base">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-neutral-700">
+                      <th className="py-3 px-4 text-left text-sm font-semibold text-neutral-500 dark:text-neutral-400">Mesure</th>
+                      <th className="py-3 px-4 text-center text-sm font-semibold text-neutral-500 dark:text-neutral-400">OD</th>
+                      <th className="py-3 px-4 text-center text-sm font-semibold text-neutral-500 dark:text-neutral-400">OG</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                    {[
+                      { label: 'Sphère moyenne (D)', od: avgSPH_OD, og: avgSPH_OG },
+                      { label: 'Cylindre moyen (D)', od: avgCYL_OD, og: avgCYL_OG },
+                      { label: 'Équivalent sphérique moyen (D)', od: avgES_OD, og: avgES_OG },
+                    ].map((row) => (
+                      <tr key={row.label} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10">
+                        <td className="py-3 px-4 text-neutral-700 dark:text-neutral-300 font-medium">{row.label}</td>
+                        <td className="py-3 px-4 text-center font-mono text-lg text-neutral-800 dark:text-neutral-100">{row.od}</td>
+                        <td className="py-3 px-4 text-center font-mono text-lg text-neutral-800 dark:text-neutral-100">{row.og}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mt-6 grid grid-cols-3 gap-4">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-5 text-center">
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase">Presbytie</p>
+                    <p className="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-1">{presbyCount}</p>
+                    <p className="text-xs text-amber-500 dark:text-amber-400 mt-1">{totalBilans ? ((presbyCount / totalBilans) * 100).toFixed(1) : 0}% des bilans</p>
+                  </div>
+                  <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-xl p-5 text-center">
+                    <p className="text-xs font-medium text-cyan-600 dark:text-cyan-400 uppercase">Astigmatisme</p>
+                    <p className="text-3xl font-bold text-cyan-700 dark:text-cyan-300 mt-1">
+                      {Object.values(astigmatismeCount).reduce((a, b) => a + b, 0)}
+                    </p>
+                    <p className="text-xs text-cyan-500 dark:text-cyan-400 mt-1">yeux avec CYL ≥ 0.5 D</p>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-5 text-center">
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase">PIO &gt; 21 mmHg</p>
+                    <p className="text-3xl font-bold text-red-700 dark:text-red-300 mt-1">{pioAlertCount}</p>
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">Référé ophtalmologique (AAO PPP)</p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Astigmatisme Pie expanded */}
+            {expandedCard === 'astigmatisme' && (
+              <div className="flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={480}>
+                  <PieChart>
+                    <Pie data={astigPieData} cx="50%" cy="50%" innerRadius={80} outerRadius={160} paddingAngle={3} dataKey="value"
+                      label={({ name, pct }) => `${name} (${pct}%)`} className="dark:[&_text]:fill-neutral-400">
+                      {astigPieData.map((_, i) => (<Cell key={i} fill={['#06b6d4', '#f59e0b', '#ef4444'][i % 3]} stroke="transparent" />))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* PIO Distribution expanded */}
+            {expandedCard === 'pio-dist' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={pioDistData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="value" name="Nb yeux" radius={[6, 6, 0, 0]}>
+                    {pioDistData.map((d, i) => (
+                      <Cell key={i} fill={d.name.includes('21') || d.name.includes('25') || d.name.includes('30') ? '#ef4444' : '#3b82f6'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Acuité Visuelle expanded */}
+            {expandedCard === 'acuite' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={avData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis domain={[0, 1.5]} tick={{ fontSize: 12, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="value" name="AV moyenne (décimal)" radius={[6, 6, 0, 0]}>
+                    {avData.map((d, i) => (
+                      <Cell key={i} fill={d.name.includes('SC') ? '#f59e0b' : '#10b981'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Anisométropie expanded */}
+            {expandedCard === 'anisometropie' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={anisoChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="value" name="Patients" radius={[6, 6, 0, 0]}>
+                    {anisoChartData.map((d, i) => (
+                      <Cell key={i} fill={d.name.includes('Normal') ? '#10b981' : d.name.includes('Légère') ? '#f59e0b' : '#ef4444'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Presbytie par âge expanded */}
+            {expandedCard === 'presbytie-age' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={presbyByAgeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="tranche" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="presbyte" name="Presbyte" fill="#f59e0b" stackId="a" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="nonPresbye" name="Non presbyte" fill="#3b82f6" stackId="a" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Axes de cylindre expanded */}
+            {expandedCard === 'axes' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <RadarChart data={axeData} cx="50%" cy="50%" outerRadius="70%">
+                  <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <PolarRadiusAxis tick={{ fontSize: 11, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Radar name="Nb yeux" dataKey="count" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.25} strokeWidth={2} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* ─── Charts Row 1: Prevalence + Demographics ──────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card title="Prévalence des amétropies" description="Classification ISO 13666:2019 (ES = SPH + CYL/2)" icon={BarChart3}>
-          <div className="mt-3 -mx-2">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={prevalenceData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
-                <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Nombre de cas" radius={[0, 4, 4, 0]}>
-                  {prevalenceData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('prevalence')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
           </div>
-          {/* Percentage table */}
-          <div className="mt-2 space-y-1">
-            {prevalenceData.map((p, i) => (
-              <div key={i} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                  <span className="text-neutral-600 dark:text-neutral-300">{p.name}</span>
+          <Card title="Prévalence des amétropies" description="Classification ISO 13666:2019 (ES = SPH + CYL/2)" icon={BarChart3}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={prevalenceData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Nombre de cas" radius={[0, 4, 4, 0]}>
+                    {prevalenceData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Percentage table */}
+            <div className="mt-2 space-y-1">
+              {prevalenceData.map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                    <span className="text-neutral-600 dark:text-neutral-300">{p.name}</span>
+                  </div>
+                  <span className="font-mono font-medium text-neutral-700 dark:text-neutral-200">{p.pct}%</span>
                 </div>
-                <span className="font-mono font-medium text-neutral-700 dark:text-neutral-200">{p.pct}%</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        </div>
 
-        <Card title="Segmentation démographique" description="Répartition par tranche d'âge" icon={Users}>
-          <div className="mt-3 -mx-2">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={demoData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
-                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Patients" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('demographics')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
           </div>
-        </Card>
+          <Card title="Segmentation démographique" description="Répartition par tranche d'âge" icon={Users}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={demoData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Patients" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* ─── Charts Row 2: Gender + Motifs ────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card title="Répartition par sexe" description="Distribution H/F de la population consultante" icon={PieIcon}>
-          <div className="mt-3 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie
-                  data={genderData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name === 'M' ? 'Masculin' : name === 'F' ? 'Féminin' : name} (${(percent * 100).toFixed(0)}%)`}
-                  className="dark:[&_text]:fill-neutral-400"
-                >
-                  {genderData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('gender')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
           </div>
-        </Card>
+          <Card title="Répartition par sexe" description="Distribution H/F de la population consultante" icon={PieIcon}>
+            <div className="mt-3 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={genderData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name === 'M' ? 'Masculin' : name === 'F' ? 'Féminin' : name} (${(percent * 100).toFixed(0)}%)`}
+                    className="dark:[&_text]:fill-neutral-400"
+                  >
+                    {genderData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
 
-        <Card title="Motifs de consultation" description="Les motifs les plus fréquents – Optimisation du dépistage" icon={Eye}>
-          <div className="mt-3 -mx-2">
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={motifData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
-                <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Nb consultations" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('motifs')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
           </div>
-        </Card>
+          <Card title="Motifs de consultation" description="Les motifs les plus fréquents – Optimisation du dépistage" icon={Eye}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={motifData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Nb consultations" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* ─── Charts Row 3: Astigmatisme + PIO Distribution ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('astigmatisme')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Distribution de l'astigmatisme" description="Répartition léger / modéré / fort (CYL ≥ 0.5 D)" icon={Crosshair}>
+            <div className="mt-3 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={astigPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value"
+                    label={({ name, pct }) => `${name} (${pct}%)`} className="dark:[&_text]:fill-neutral-400">
+                    {astigPieData.map((_, i) => (<Cell key={i} fill={['#06b6d4', '#f59e0b', '#ef4444'][i % 3]} stroke="transparent" />))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 flex justify-center gap-4">
+              {astigPieData.map((d, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: ['#06b6d4', '#f59e0b', '#ef4444'][i % 3] }} />
+                  <span className="text-neutral-600 dark:text-neutral-300">{d.name}: <strong>{d.value}</strong></span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('pio-dist')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Distribution de la PIO" description="Histogramme des valeurs PIO (mmHg) – Seuil AAO PPP" icon={Gauge}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={pioDistData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Nb yeux" radius={[4, 4, 0, 0]}>
+                    {pioDistData.map((d, i) => (
+                      <Cell key={i} fill={d.name.includes('21') || d.name.includes('25') || d.name.includes('30') ? '#ef4444' : '#3b82f6'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* ─── Charts Row 4: Acuité Visuelle + Anisométropie ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('acuite')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Acuité visuelle moyenne" description="Comparaison SC vs AC – ISO 8596" icon={Eye}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={avData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis domain={[0, 1.5]} tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="AV moyenne" radius={[4, 4, 0, 0]}>
+                    {avData.map((d, i) => (
+                      <Cell key={i} fill={d.name.includes('SC') ? '#f59e0b' : '#10b981'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 flex justify-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                <span className="text-neutral-500 dark:text-neutral-400">Sans correction</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span className="text-neutral-500 dark:text-neutral-400">Avec correction</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('anisometropie')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Analyse de l'anisométropie" description="Différence d'ES entre OD et OG – ISO 14971" icon={AlertTriangle}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={anisoChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Patients" radius={[4, 4, 0, 0]}>
+                    {anisoChartData.map((d, i) => (
+                      <Cell key={i} fill={d.name.includes('Normal') ? '#10b981' : d.name.includes('Légère') ? '#f59e0b' : '#ef4444'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {anisoCount > 0 && (
+              <div className="mt-2 bg-red-50 dark:bg-red-900/20 rounded-lg p-2 text-center">
+                <p className="text-xs text-red-600 dark:text-red-400">
+                  ⚠ {anisoCount} patient{anisoCount > 1 ? 's' : ''} avec anisométropie significative ({'>'} 2D)
+                </p>
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* ─── Charts Row 5: Presbytie/âge + Axes cylindre ──── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('presbytie-age')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Presbytie par tranche d'âge" description="Taux de presbytie par groupe d'âge (addition > 0)" icon={Glasses}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={presbyByAgeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="tranche" tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Bar dataKey="presbyte" name="Presbyte" fill="#f59e0b" stackId="a" />
+                  <Bar dataKey="nonPresbye" name="Non presbyte" fill="#3b82f6" stackId="a" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('axes')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Distribution des axes de cylindre" description="Orientation de l'astigmatisme (0–180°)" icon={Activity}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <RadarChart data={axeData} cx="50%" cy="50%" outerRadius="65%">
+                  <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <PolarRadiusAxis tick={{ fontSize: 8, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Radar name="Nb yeux" dataKey="count" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} strokeWidth={2} />
+                  <Tooltip content={<CustomTooltip />} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* ─── Moyennes de réfraction ───────────────────────── */}
+      <div className="cursor-pointer group relative" onClick={() => setExpandedCard('refraction')}>
+        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+          <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+        </div>
       <Card title="Moyennes de réfraction" description="Calculs automatiques ES (ISO 13666:2019)" icon={TrendingUp}>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
@@ -455,6 +1049,7 @@ export default function StatisticalAnalysis() {
           </div>
         </div>
       </Card>
+      </div>
 
       {/* ─── Footer ───────────────────────────────────────── */}
       <div className="text-center py-4 border-t border-neutral-200 dark:border-neutral-700">

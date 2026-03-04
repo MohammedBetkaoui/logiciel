@@ -4,7 +4,8 @@
 // Analyse statistique des bilans – Institut BBA
 // ─────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
@@ -20,6 +21,8 @@ import {
   ShieldAlert,
   TrendingUp,
   Download,
+  X,
+  Maximize2,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -103,7 +106,7 @@ function CustomTooltip({ active, payload, label }) {
 // COMPOSANT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
-export default function MedicalDashboard() {
+export default function MedicalDashboard({ targetCard, onTargetCardConsumed }) {
   const [stats, setStats] = useState(EMPTY_STATS);
   const [anomalies, setAnomalies] = useState([]);
   const [pioData, setPioData] = useState([]);
@@ -111,6 +114,35 @@ export default function MedicalDashboard() {
   const [alerts, setAlerts] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
+  const [expandedCard, setExpandedCard] = useState(null);
+  const modalRef = useRef(null);
+
+  // Auto-expand card when navigated from guide page
+  useEffect(() => {
+    if (targetCard) {
+      setExpandedCard(targetCard);
+      if (onTargetCardConsumed) onTargetCardConsumed();
+    }
+  }, [targetCard, onTargetCardConsumed]);
+
+  // Scroll main container to top on open & lock scroll
+  useEffect(() => {
+    const mainEl = document.querySelector('main');
+    if (expandedCard) {
+      if (mainEl) {
+        mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+        mainEl.style.overflow = 'hidden';
+      }
+      document.body.style.overflow = 'hidden';
+    } else {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+    return () => {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, [expandedCard]);
 
   // Charger les données depuis l'API si disponible
   useEffect(() => {
@@ -228,157 +260,278 @@ export default function MedicalDashboard() {
         />
       </div>
 
+      {/* ─── Expanded Card Modal ─────────────────────────── */}
+      {expandedCard && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+          onClick={() => setExpandedCard(null)}
+        >
+          <div
+            ref={modalRef}
+            className="relative bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-[90vw] max-w-5xl max-h-[90vh] overflow-y-auto p-8 animate-[scaleIn_0.25s_ease-out]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setExpandedCard(null)}
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="mb-6">
+              <h2 className="text-lg font-bold text-neutral-800 dark:text-neutral-100">
+                {expandedCard === 'anomalies' && 'Prévalence des anomalies'}
+                {expandedCard === 'pio' && 'Évolution de la PIO'}
+                {expandedCard === 'demographics' && 'Segmentation démographique'}
+                {expandedCard === 'alerts' && 'Alertes cliniques actives'}
+              </h2>
+              <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
+                {expandedCard === 'anomalies' && 'Distribution épidémiologique des pathologies détectées'}
+                {expandedCard === 'pio' && 'Pression intraoculaire (mmHg) – Seuil: 21 mmHg'}
+                {expandedCard === 'demographics' && "Répartition par tranche d'âge – population dépistée"}
+                {expandedCard === 'alerts' && 'Patients nécessitant une attention (ISO 14971)'}
+              </p>
+            </div>
+
+            {/* Anomalies Radar expanded */}
+            {expandedCard === 'anomalies' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <RadarChart data={anomalies} cx="50%" cy="50%" outerRadius="70%">
+                  <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+                  <PolarAngleAxis dataKey="anomalie" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <PolarRadiusAxis tick={{ fontSize: 11, fill: '#9ca3af' }} domain={[0, 'auto']} className="dark:[&_text]:fill-neutral-500" />
+                  <Radar name="Cas détectés" dataKey="count" stroke={COLORS.blue} fill={COLORS.blue} fillOpacity={0.2} strokeWidth={2} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* PIO Line expanded */}
+            {expandedCard === 'pio' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <LineChart data={pioData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="patient" tick={{ fontSize: 12, fill: '#6b7280' }} angle={-20} textAnchor="end" height={60} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} domain={[8, 30]} label={{ value: 'mmHg', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#9ca3af' } }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <ReferenceLine y={21} stroke={COLORS.red} strokeDasharray="4 4" label={{ value: 'Seuil 21 mmHg', position: 'right', style: { fontSize: 12, fill: COLORS.red } }} />
+                  <Line type="monotone" dataKey="pio_od" name="PIO OD" stroke={COLORS.blue} strokeWidth={2.5} dot={{ r: 5, fill: COLORS.blue }} activeDot={{ r: 7 }} />
+                  <Line type="monotone" dataKey="pio_og" name="PIO OG" stroke={COLORS.emerald} strokeWidth={2.5} dot={{ r: 5, fill: COLORS.emerald }} activeDot={{ r: 7 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Demographics Pie expanded */}
+            {expandedCard === 'demographics' && (
+              <div className="flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={480}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={160}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                      className="dark:[&_text]:fill-neutral-400"
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" strokeWidth={2} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Alerts expanded */}
+            {expandedCard === 'alerts' && (
+              <div className="max-h-[60vh] overflow-y-auto">
+                <ClinicalAlerts alerts={alerts} />
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* ─── Charts Row 1: Radar + PIO Line ───────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Radar Chart – Répartition des anomalies */}
-        <Card
-          title="Prévalence des anomalies"
-          description="Distribution épidémiologique des pathologies détectées"
-          icon={Activity}
-        >
-          <div className="mt-3 -mx-2" role="img" aria-label="Graphique radar des anomalies visuelles">
-            <ResponsiveContainer width="100%" height={280}>
-              <RadarChart data={anomalies} cx="50%" cy="50%" outerRadius="70%">
-                <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
-                <PolarAngleAxis
-                  dataKey="anomalie"
-                  tick={{ fontSize: 10, fill: '#6b7280' }}
-                  className="dark:[&_text]:fill-neutral-400"
-                />
-                <PolarRadiusAxis
-                  tick={{ fontSize: 9, fill: '#9ca3af' }}
-                  domain={[0, 'auto']}
-                  className="dark:[&_text]:fill-neutral-500"
-                />
-                <Radar
-                  name="Cas détectés"
-                  dataKey="count"
-                  stroke={COLORS.blue}
-                  fill={COLORS.blue}
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                />
-                <Tooltip content={<CustomTooltip />} />
-              </RadarChart>
-            </ResponsiveContainer>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('anomalies')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
           </div>
-        </Card>
+          <Card
+            title="Prévalence des anomalies"
+            description="Distribution épidémiologique des pathologies détectées"
+            icon={Activity}
+          >
+            <div className="mt-3 -mx-2" role="img" aria-label="Graphique radar des anomalies visuelles">
+              <ResponsiveContainer width="100%" height={280}>
+                <RadarChart data={anomalies} cx="50%" cy="50%" outerRadius="70%">
+                  <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+                  <PolarAngleAxis
+                    dataKey="anomalie"
+                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    className="dark:[&_text]:fill-neutral-400"
+                  />
+                  <PolarRadiusAxis
+                    tick={{ fontSize: 9, fill: '#9ca3af' }}
+                    domain={[0, 'auto']}
+                    className="dark:[&_text]:fill-neutral-500"
+                  />
+                  <Radar
+                    name="Cas détectés"
+                    dataKey="count"
+                    stroke={COLORS.blue}
+                    fill={COLORS.blue}
+                    fillOpacity={0.2}
+                    strokeWidth={2}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
 
         {/* Line Chart – Évolution PIO */}
-        <Card
-          title="Évolution de la PIO"
-          description="Pression intraoculaire (mmHg) – Seuil: 21 mmHg"
-          icon={TrendingUp}
-        >
-          <div className="mt-3 -mx-2" role="img" aria-label="Graphique évolution de la pression intraoculaire">
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={pioData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" className="dark:[&>line]:stroke-neutral-700" />
-                <XAxis
-                  dataKey="patient"
-                  tick={{ fontSize: 10, fill: '#6b7280' }}
-                  angle={-20}
-                  textAnchor="end"
-                  height={50}
-                  className="dark:[&_text]:fill-neutral-400"
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: '#9ca3af' }}
-                  domain={[8, 30]}
-                  label={{
-                    value: 'mmHg',
-                    angle: -90,
-                    position: 'insideLeft',
-                    style: { fontSize: 10, fill: '#9ca3af' },
-                  }}
-                  className="dark:[&_text]:fill-neutral-500"
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  wrapperStyle={{ fontSize: 11 }}
-                />
-                <ReferenceLine
-                  y={21}
-                  stroke={COLORS.red}
-                  strokeDasharray="4 4"
-                  label={{
-                    value: 'Seuil 21 mmHg',
-                    position: 'right',
-                    style: { fontSize: 10, fill: COLORS.red },
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="pio_od"
-                  name="PIO OD"
-                  stroke={COLORS.blue}
-                  strokeWidth={2}
-                  dot={{ r: 4, fill: COLORS.blue }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="pio_og"
-                  name="PIO OG"
-                  stroke={COLORS.emerald}
-                  strokeWidth={2}
-                  dot={{ r: 4, fill: COLORS.emerald }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('pio')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
           </div>
-        </Card>
+          <Card
+            title="Évolution de la PIO"
+            description="Pression intraoculaire (mmHg) – Seuil: 21 mmHg"
+            icon={TrendingUp}
+          >
+            <div className="mt-3 -mx-2" role="img" aria-label="Graphique évolution de la pression intraoculaire">
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={pioData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis
+                    dataKey="patient"
+                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    angle={-20}
+                    textAnchor="end"
+                    height={50}
+                    className="dark:[&_text]:fill-neutral-400"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
+                    domain={[8, 30]}
+                    label={{
+                      value: 'mmHg',
+                      angle: -90,
+                      position: 'insideLeft',
+                      style: { fontSize: 10, fill: '#9ca3af' },
+                    }}
+                    className="dark:[&_text]:fill-neutral-500"
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ fontSize: 11 }}
+                  />
+                  <ReferenceLine
+                    y={21}
+                    stroke={COLORS.red}
+                    strokeDasharray="4 4"
+                    label={{
+                      value: 'Seuil 21 mmHg',
+                      position: 'right',
+                      style: { fontSize: 10, fill: COLORS.red },
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="pio_od"
+                    name="PIO OD"
+                    stroke={COLORS.blue}
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: COLORS.blue }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="pio_og"
+                    name="PIO OG"
+                    stroke={COLORS.emerald}
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: COLORS.emerald }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* ─── Charts Row 2: Demographics + Alerts ──────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pie Chart – Démographie */}
-        <Card
-          title="Segmentation démographique"
-          description="Répartition par tranche d'âge – population dépistée"
-          icon={Users}
-        >
-          <div className="mt-3 flex items-center justify-center" role="img" aria-label="Graphique répartition démographique">
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={90}
-                  paddingAngle={3}
-                  dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name} (${(percent * 100).toFixed(0)}%)`
-                  }
-                  labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
-                  className="dark:[&_text]:fill-neutral-400"
-                >
-                  {pieData.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={PIE_COLORS[i % PIE_COLORS.length]}
-                      stroke="transparent"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('demographics')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
           </div>
-        </Card>
+          <Card
+            title="Segmentation démographique"
+            description="Répartition par tranche d'âge – population dépistée"
+            icon={Users}
+          >
+            <div className="mt-3 flex items-center justify-center" role="img" aria-label="Graphique répartition démographique">
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    paddingAngle={3}
+                    dataKey="value"
+                    label={({ name, percent }) =>
+                      `${name} (${(percent * 100).toFixed(0)}%)`
+                    }
+                    labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                    className="dark:[&_text]:fill-neutral-400"
+                  >
+                    {pieData.map((_, i) => (
+                      <Cell
+                        key={i}
+                        fill={PIE_COLORS[i % PIE_COLORS.length]}
+                        stroke="transparent"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
 
         {/* Alertes cliniques actives */}
-        <Card
-          title="Alertes cliniques actives"
-          description="Patients nécessitant une attention (ISO 14971)"
-          icon={ShieldAlert}
-        >
-          <ClinicalAlerts alerts={alerts} />
-        </Card>
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('alerts')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card
+            title="Alertes cliniques actives"
+            description="Patients nécessitant une attention (ISO 14971)"
+            icon={ShieldAlert}
+          >
+            <ClinicalAlerts alerts={alerts} />
+          </Card>
+        </div>
       </div>
     </div>
   );
