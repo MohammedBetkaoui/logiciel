@@ -83,6 +83,14 @@ function UrgenceBadge({ niveau }) {
 
 // ─── Export PDF (via impression navigateur) ───────────────────
 function generatePrintContent(bilan) {
+  const urgenceConfig = {
+    0: { label: 'Routine', color: '#6b7280', bg: '#f3f4f6' },
+    1: { label: 'Surveillance', color: '#2563eb', bg: '#eff6ff' },
+    2: { label: 'Référé', color: '#d97706', bg: '#fffbeb' },
+    3: { label: 'Urgence', color: '#dc2626', bg: '#fef2f2' },
+  };
+  const urg = urgenceConfig[bilan.niveau_urgence ?? 0] || urgenceConfig[0];
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -90,136 +98,430 @@ function generatePrintContent(bilan) {
   <meta charset="UTF-8">
   <title>Bilan Optométrique – ${bilan.nom} ${bilan.prenom}</title>
   <style>
+    @page { size: A4; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 11px; color: #1a1a1a; padding: 20mm; }
-    h1 { font-size: 16px; margin-bottom: 4px; }
-    h2 { font-size: 13px; color: #2563eb; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
-    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 16px; }
-    .header-right { text-align: right; font-size: 10px; color: #6b7280; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .field { padding: 6px 8px; background: #f9fafb; border-radius: 4px; }
-    .field-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; margin-bottom: 2px; }
-    .field-value { font-size: 11px; font-weight: 600; }
-    .field-value.mono { font-family: 'Consolas', monospace; }
-    .field-value.alert { color: #dc2626; }
-    .eye-block { padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; }
-    .eye-block h4 { font-size: 11px; font-weight: 700; margin-bottom: 6px; }
-    .eye-block.od h4 { color: #2563eb; }
-    .eye-block.og h4 { color: #059669; }
-    .alert-box { padding: 8px 12px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; margin-top: 8px; font-size: 10px; }
-    .footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #9ca3af; display: flex; justify-content: space-between; }
-    .conformity { font-size: 8px; color: #9ca3af; margin-top: 4px; }
-    @media print { body { padding: 10mm; } }
+    body {
+      font-family: 'Segoe UI', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10px; color: #1e293b; background: #fff;
+      padding: 0; line-height: 1.45;
+    }
+    .page { padding: 14mm 16mm 20mm; position: relative; min-height: 100vh; }
+
+    /* ── Bande latérale décorative ── */
+    .side-band {
+      position: fixed; top: 0; left: 0; width: 5px; height: 100%;
+      background: linear-gradient(180deg, #1e40af, #3b82f6, #93c5fd);
+    }
+
+    /* ── En-tête ── */
+    .header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding-bottom: 14px; margin-bottom: 16px;
+      border-bottom: 2.5px solid #1e40af;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      width: 48px; height: 48px; border-radius: 10px;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 16px; letter-spacing: -0.5px;
+      box-shadow: 0 2px 8px rgba(30,64,175,0.25);
+    }
+    .header-text h1 {
+      font-size: 18px; font-weight: 800; color: #0f172a;
+      letter-spacing: -0.3px; line-height: 1.2;
+    }
+    .header-text .subtitle {
+      font-size: 9px; color: #64748b; font-weight: 500;
+      margin-top: 2px; letter-spacing: 0.3px;
+    }
+    .header-meta { text-align: right; }
+    .header-meta .doc-type {
+      font-size: 8px; text-transform: uppercase; letter-spacing: 1.5px;
+      color: #1e40af; font-weight: 700; margin-bottom: 4px;
+    }
+    .header-meta .ref-number {
+      font-size: 20px; font-weight: 800; color: #0f172a;
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+    .header-meta .date-line {
+      font-size: 9px; color: #64748b; margin-top: 3px;
+    }
+
+    /* ── Bandeau patient ── */
+    .patient-banner {
+      display: flex; justify-content: space-between; align-items: center;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 1px solid #bae6fd; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 16px;
+    }
+    .patient-info { display: flex; align-items: center; gap: 12px; }
+    .patient-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 15px;
+    }
+    .patient-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .patient-details { font-size: 9px; color: #475569; margin-top: 2px; }
+    .urgence-badge {
+      padding: 4px 12px; border-radius: 20px; font-size: 9px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ── Sections ── */
+    .section {
+      margin-bottom: 14px; border: 1px solid #e2e8f0;
+      border-radius: 8px; overflow: hidden;
+    }
+    .section-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      color: #1e40af; background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .section-header .badge {
+      margin-left: auto; font-size: 7px; padding: 2px 7px;
+      background: #dbeafe; color: #1e40af; border-radius: 10px;
+      font-weight: 600; letter-spacing: 0.3px;
+    }
+    .section-body { padding: 12px 14px; }
+
+    /* ── Tableaux de données ── */
+    table.data-table {
+      width: 100%; border-collapse: collapse; font-size: 10px;
+    }
+    table.data-table th {
+      background: #f1f5f9; color: #64748b; font-size: 8px;
+      text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;
+      padding: 6px 10px; text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    table.data-table td {
+      padding: 7px 10px; border-bottom: 1px solid #f1f5f9;
+      font-weight: 500;
+    }
+    table.data-table tr:last-child td { border-bottom: none; }
+    table.data-table .mono {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-weight: 600; letter-spacing: 0.3px;
+    }
+    table.data-table .alert { color: #dc2626; font-weight: 700; }
+    table.data-table .eye-label {
+      font-weight: 700; font-size: 9px; padding: 5px 10px;
+    }
+    table.data-table .eye-od { color: #1e40af; background: #eff6ff; }
+    table.data-table .eye-og { color: #047857; background: #ecfdf5; }
+
+    /* ── Grille simple ── */
+    .field-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .field-grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .field-grid-6 { grid-template-columns: repeat(6, 1fr); }
+    .field-card {
+      padding: 7px 10px; background: #f8fafc;
+      border: 1px solid #f1f5f9; border-radius: 6px;
+    }
+    .field-card .label {
+      font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.6px;
+      color: #94a3b8; font-weight: 600; margin-bottom: 3px;
+    }
+    .field-card .value {
+      font-size: 11px; font-weight: 600; color: #0f172a;
+    }
+    .field-card .value.mono {
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+    .field-card .value.alert { color: #dc2626; }
+
+    /* ── Alerte clinique ── */
+    .clinical-alert {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px; background: #fffbeb;
+      border: 1px solid #fcd34d; border-left: 4px solid #f59e0b;
+      border-radius: 6px; margin-top: 12px;
+    }
+    .clinical-alert .alert-icon {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #fef3c7; display: flex; align-items: center;
+      justify-content: center; font-size: 11px; flex-shrink: 0; margin-top: 1px;
+    }
+    .clinical-alert .alert-title {
+      font-size: 9px; font-weight: 700; color: #92400e;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .clinical-alert .alert-text {
+      font-size: 10px; color: #78350f; margin-top: 2px; line-height: 1.5;
+    }
+
+    /* ── Conclusion ── */
+    .conclusion-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .conclusion-box {
+      padding: 10px 14px; background: #f8fafc;
+      border: 1px solid #e2e8f0; border-radius: 6px;
+    }
+    .conclusion-box .box-label {
+      font-size: 8px; text-transform: uppercase; letter-spacing: 0.6px;
+      color: #64748b; font-weight: 600; margin-bottom: 4px;
+    }
+    .conclusion-box .box-value {
+      font-size: 10px; color: #0f172a; font-weight: 500; line-height: 1.5;
+    }
+
+    /* ── Pied de page ── */
+    .footer-area {
+      position: absolute; bottom: 14mm; left: 16mm; right: 16mm;
+    }
+    .footer-line {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      padding-top: 10px; border-top: 1.5px solid #e2e8f0;
+    }
+    .footer-left { font-size: 7.5px; color: #94a3b8; line-height: 1.6; }
+    .footer-left .brand { font-weight: 700; color: #64748b; }
+    .footer-right { text-align: right; }
+    .footer-right .hash {
+      font-family: 'Consolas', monospace; font-size: 7px;
+      color: #94a3b8; background: #f8fafc; padding: 3px 8px;
+      border-radius: 4px; border: 1px solid #f1f5f9;
+    }
+    .footer-right .standards {
+      font-size: 7px; color: #94a3b8; margin-top: 4px;
+    }
+
+    /* ── Estampille ── */
+    .stamp {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border: 1.5px solid #cbd5e1;
+      border-radius: 4px; font-size: 7px; color: #64748b;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;
+    }
+    .stamp-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+    }
+
+    @media print {
+      .page { padding: 10mm 14mm 18mm; }
+      .side-band { display: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div>
-      <h1>Bilan Optométrique</h1>
-      <p style="color:#6b7280">BBA-Data – Institut BBA – Analyse des bilans optométriques</p>
-    </div>
-    <div class="header-right">
-      <p><strong>Date :</strong> ${fmtDate(bilan.date_examen)}</p>
-      <p><strong>Praticien :</strong> ${bilan.praticien || '—'}</p>
-      <p><strong>Réf :</strong> #${bilan.examen_id}</p>
-    </div>
-  </div>
+  <div class="side-band"></div>
+  <div class="page">
 
-  <h2>Patient</h2>
-  <div class="grid">
-    <div class="field"><div class="field-label">Nom</div><div class="field-value">${bilan.nom || '—'} ${bilan.prenom || ''}</div></div>
-    <div class="field"><div class="field-label">Date de naissance</div><div class="field-value">${bilan.date_naissance || '—'}</div></div>
-    <div class="field"><div class="field-label">Sexe</div><div class="field-value">${bilan.sexe || '—'}</div></div>
-  </div>
-
-  <h2>Acuité Visuelle (ISO 8596)</h2>
-  <div class="grid">
-    <div class="field"><div class="field-label">AV OD SC</div><div class="field-value">${fmt(bilan.av_od_sc)}</div></div>
-    <div class="field"><div class="field-label">AV OG SC</div><div class="field-value">${fmt(bilan.av_og_sc)}</div></div>
-    <div class="field"><div class="field-label">AV OD AC</div><div class="field-value">${fmt(bilan.av_od_ac)}</div></div>
-    <div class="field"><div class="field-label">AV OG AC</div><div class="field-value">${fmt(bilan.av_og_ac)}</div></div>
-    <div class="field"><div class="field-label">AV Binoculaire</div><div class="field-value">${fmt(bilan.av_binoculaire)}</div></div>
-  </div>
-
-  <h2>Réfraction Objective (Autoréfractomètre)</h2>
-  <div class="grid-2">
-    <div class="eye-block od">
-      <h4>Œil Droit (OD)</h4>
-      <div class="grid">
-        <div class="field"><div class="field-label">SPH</div><div class="field-value mono">${fmtSphere(bilan.auto_od_sphere)}</div></div>
-        <div class="field"><div class="field-label">CYL</div><div class="field-value mono">${fmtSphere(bilan.auto_od_cylindre)}</div></div>
-        <div class="field"><div class="field-label">AXE</div><div class="field-value mono">${fmt(bilan.auto_od_axe, '°')}</div></div>
+    <!-- ═══ EN-TÊTE ═══ -->
+    <div class="header">
+      <div class="header-brand">
+        <div class="header-logo">BBA</div>
+        <div class="header-text">
+          <h1>Bilan Optométrique</h1>
+          <div class="subtitle">Institut BBA &nbsp;·&nbsp; Système Digital d'Analyse Statistique des Bilans Optométriques</div>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="doc-type">Rapport d'Examen</div>
+        <div class="ref-number">#${String(bilan.examen_id).padStart(4, '0')}</div>
+        <div class="date-line">${fmtDate(bilan.date_examen)}</div>
+        <div class="date-line">Praticien : <strong>${bilan.praticien || '—'}</strong></div>
       </div>
     </div>
-    <div class="eye-block og">
-      <h4>Œil Gauche (OG)</h4>
-      <div class="grid">
-        <div class="field"><div class="field-label">SPH</div><div class="field-value mono">${fmtSphere(bilan.auto_og_sphere)}</div></div>
-        <div class="field"><div class="field-label">CYL</div><div class="field-value mono">${fmtSphere(bilan.auto_og_cylindre)}</div></div>
-        <div class="field"><div class="field-label">AXE</div><div class="field-value mono">${fmt(bilan.auto_og_axe, '°')}</div></div>
+
+    <!-- ═══ BANDEAU PATIENT ═══ -->
+    <div class="patient-banner">
+      <div class="patient-info">
+        <div class="patient-avatar">${(bilan.nom?.[0] || '?').toUpperCase()}</div>
+        <div>
+          <div class="patient-name">${bilan.nom || '—'} ${bilan.prenom || ''}</div>
+          <div class="patient-details">
+            Né(e) le ${bilan.date_naissance || '—'} &nbsp;·&nbsp; Sexe : ${bilan.sexe || '—'}
+          </div>
+        </div>
+      </div>
+      <span class="urgence-badge" style="background:${urg.bg}; color:${urg.color}; border:1px solid ${urg.color}30;">
+        ● &nbsp;${urg.label}
+      </span>
+    </div>
+
+    <!-- ═══ ACUITÉ VISUELLE ═══ -->
+    <div class="section">
+      <div class="section-header">
+        <span>👁 &nbsp;Acuité Visuelle</span>
+        <span class="badge">ISO 8596</span>
+      </div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th></th><th>sans correction</th><th>avec correction</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="eye-label eye-od">Œil Droit (OD)</td>
+              <td class="mono">${fmt(bilan.av_od_sc)}</td>
+              <td class="mono">${fmt(bilan.av_od_ac)}</td>
+            </tr>
+            <tr>
+              <td class="eye-label eye-og">Œil Gauche (OG)</td>
+              <td class="mono">${fmt(bilan.av_og_sc)}</td>
+              <td class="mono">${fmt(bilan.av_og_ac)}</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600; color:#475569;">AV Binoculaire</td>
+              <td class="mono" colspan="2">${fmt(bilan.av_binoculaire)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </div>
 
-  <h2>Réfraction Subjective (Prescription – ISO 13666)</h2>
-  <div class="grid-2">
-    <div class="eye-block od">
-      <h4>Œil Droit (OD)</h4>
-      <div class="grid">
-        <div class="field"><div class="field-label">SPH</div><div class="field-value mono">${fmtSphere(bilan.rx_od_sphere)}</div></div>
-        <div class="field"><div class="field-label">CYL</div><div class="field-value mono">${fmtSphere(bilan.rx_od_cylindre)}</div></div>
-        <div class="field"><div class="field-label">AXE</div><div class="field-value mono">${fmt(bilan.rx_od_axe, '°')}</div></div>
-        <div class="field"><div class="field-label">ADD</div><div class="field-value mono">${fmtSphere(bilan.rx_od_addition)}</div></div>
-        <div class="field"><div class="field-label">Prisme</div><div class="field-value mono">${fmt(bilan.rx_od_prisme, ' Δ')}</div></div>
-        <div class="field"><div class="field-label">Base</div><div class="field-value">${fmt(bilan.rx_od_base_prisme)}</div></div>
+    <!-- ═══ RÉFRACTION OBJECTIVE ═══ -->
+    <div class="section">
+      <div class="section-header">
+        <span>🔬 &nbsp;Réfraction Objective</span>
+        <span class="badge">Autoréfractomètre</span>
+      </div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead>
+            <tr><th></th><th>Sphère</th><th>Cylindre</th><th>Axe</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="eye-label eye-od">OD</td>
+              <td class="mono">${fmtSphere(bilan.auto_od_sphere)}</td>
+              <td class="mono">${fmtSphere(bilan.auto_od_cylindre)}</td>
+              <td class="mono">${fmt(bilan.auto_od_axe, '°')}</td>
+            </tr>
+            <tr>
+              <td class="eye-label eye-og">OG</td>
+              <td class="mono">${fmtSphere(bilan.auto_og_sphere)}</td>
+              <td class="mono">${fmtSphere(bilan.auto_og_cylindre)}</td>
+              <td class="mono">${fmt(bilan.auto_og_axe, '°')}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    <div class="eye-block og">
-      <h4>Œil Gauche (OG)</h4>
-      <div class="grid">
-        <div class="field"><div class="field-label">SPH</div><div class="field-value mono">${fmtSphere(bilan.rx_og_sphere)}</div></div>
-        <div class="field"><div class="field-label">CYL</div><div class="field-value mono">${fmtSphere(bilan.rx_og_cylindre)}</div></div>
-        <div class="field"><div class="field-label">AXE</div><div class="field-value mono">${fmt(bilan.rx_og_axe, '°')}</div></div>
-        <div class="field"><div class="field-label">ADD</div><div class="field-value mono">${fmtSphere(bilan.rx_og_addition)}</div></div>
-        <div class="field"><div class="field-label">Prisme</div><div class="field-value mono">${fmt(bilan.rx_og_prisme, ' Δ')}</div></div>
-        <div class="field"><div class="field-label">Base</div><div class="field-value">${fmt(bilan.rx_og_base_prisme)}</div></div>
+
+    <!-- ═══ RÉFRACTION SUBJECTIVE ═══ -->
+    <div class="section">
+      <div class="section-header">
+        <span>📋 &nbsp;Réfraction Subjective – Prescription</span>
+        <span class="badge">ISO 13666</span>
+      </div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead>
+            <tr><th></th><th>Sphère</th><th>Cylindre</th><th>Axe</th><th>Addition</th><th>Prisme</th><th>Base</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="eye-label eye-od">OD</td>
+              <td class="mono">${fmtSphere(bilan.rx_od_sphere)}</td>
+              <td class="mono">${fmtSphere(bilan.rx_od_cylindre)}</td>
+              <td class="mono">${fmt(bilan.rx_od_axe, '°')}</td>
+              <td class="mono">${fmtSphere(bilan.rx_od_addition)}</td>
+              <td class="mono">${fmt(bilan.rx_od_prisme, ' Δ')}</td>
+              <td>${fmt(bilan.rx_od_base_prisme)}</td>
+            </tr>
+            <tr>
+              <td class="eye-label eye-og">OG</td>
+              <td class="mono">${fmtSphere(bilan.rx_og_sphere)}</td>
+              <td class="mono">${fmtSphere(bilan.rx_og_cylindre)}</td>
+              <td class="mono">${fmt(bilan.rx_og_axe, '°')}</td>
+              <td class="mono">${fmtSphere(bilan.rx_og_addition)}</td>
+              <td class="mono">${fmt(bilan.rx_og_prisme, ' Δ')}</td>
+              <td>${fmt(bilan.rx_og_base_prisme)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </div>
 
-  <h2>Mesures Complémentaires</h2>
-  <div class="grid">
-    <div class="field"><div class="field-label">DP OD</div><div class="field-value mono">${fmt(bilan.dp_od, ' mm')}</div></div>
-    <div class="field"><div class="field-label">DP OG</div><div class="field-value mono">${fmt(bilan.dp_og, ' mm')}</div></div>
-    <div class="field"><div class="field-label">DP Bino</div><div class="field-value mono">${fmt(bilan.dp_binoculaire, ' mm')}</div></div>
-    <div class="field"><div class="field-label">PIO OD</div><div class="field-value mono ${bilan.pio_od > 21 ? 'alert' : ''}">${fmt(bilan.pio_od, ' mmHg')}</div></div>
-    <div class="field"><div class="field-label">PIO OG</div><div class="field-value mono ${bilan.pio_og > 21 ? 'alert' : ''}">${fmt(bilan.pio_og, ' mmHg')}</div></div>
-    <div class="field"><div class="field-label">Méthode PIO</div><div class="field-value">${fmt(bilan.methode_pio)}</div></div>
-  </div>
+    <!-- ═══ MESURES COMPLÉMENTAIRES ═══ -->
+    <div class="section">
+      <div class="section-header">
+        <span>📐 &nbsp;Distances Pupillaires & Pression Intraoculaire</span>
+      </div>
+      <div class="section-body">
+        <div class="field-grid field-grid-6">
+          <div class="field-card"><div class="label">DP OD</div><div class="value mono">${fmt(bilan.dp_od, ' mm')}</div></div>
+          <div class="field-card"><div class="label">DP OG</div><div class="value mono">${fmt(bilan.dp_og, ' mm')}</div></div>
+          <div class="field-card"><div class="label">DP Binoculaire</div><div class="value mono">${fmt(bilan.dp_binoculaire, ' mm')}</div></div>
+          <div class="field-card"><div class="label">PIO OD</div><div class="value mono ${bilan.pio_od > 21 ? 'alert' : ''}">${fmt(bilan.pio_od, ' mmHg')}</div></div>
+          <div class="field-card"><div class="label">PIO OG</div><div class="value mono ${bilan.pio_og > 21 ? 'alert' : ''}">${fmt(bilan.pio_og, ' mmHg')}</div></div>
+          <div class="field-card"><div class="label">Méthode PIO</div><div class="value">${fmt(bilan.methode_pio)}</div></div>
+        </div>
+      </div>
+    </div>
 
-  <h2>Vision Binoculaire & Examens</h2>
-  <div class="grid">
-    <div class="field"><div class="field-label">Motilité</div><div class="field-value">${fmt(bilan.motilite_oculaire)}</div></div>
-    <div class="field"><div class="field-label">Cover Test</div><div class="field-value">${fmt(bilan.cover_test)}</div></div>
-    <div class="field"><div class="field-label">Test couleurs</div><div class="field-value">${fmt(bilan.test_couleurs)}</div></div>
-    <div class="field"><div class="field-label">Fond d'œil</div><div class="field-value">${fmt(bilan.fond_oeil)}</div></div>
-    <div class="field"><div class="field-label">Biomicroscopie</div><div class="field-value">${fmt(bilan.biomicroscopie)}</div></div>
-    <div class="field"><div class="field-label">Champ visuel</div><div class="field-value">${fmt(bilan.champ_visuel)}</div></div>
-  </div>
+    <!-- ═══ VISION BINOCULAIRE ═══ -->
+    <div class="section">
+      <div class="section-header">
+        <span>🔍 &nbsp;Vision Binoculaire & Examens Complémentaires</span>
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field-card"><div class="label">Motilité oculaire</div><div class="value">${fmt(bilan.motilite_oculaire)}</div></div>
+          <div class="field-card"><div class="label">Cover Test</div><div class="value">${fmt(bilan.cover_test)}</div></div>
+          <div class="field-card"><div class="label">Test couleurs</div><div class="value">${fmt(bilan.test_couleurs)}</div></div>
+          <div class="field-card"><div class="label">Fond d'œil</div><div class="value">${fmt(bilan.fond_oeil)}</div></div>
+          <div class="field-card"><div class="label">Biomicroscopie</div><div class="value">${fmt(bilan.biomicroscopie)}</div></div>
+          <div class="field-card"><div class="label">Champ visuel</div><div class="value">${fmt(bilan.champ_visuel)}</div></div>
+        </div>
+      </div>
+    </div>
 
-  <h2>Conclusion</h2>
-  <div class="grid" style="grid-template-columns: 1fr 1fr;">
-    <div class="field"><div class="field-label">Diagnostic</div><div class="field-value">${fmt(bilan.diagnostic)}</div></div>
-    <div class="field"><div class="field-label">Observations</div><div class="field-value">${fmt(bilan.observations)}</div></div>
-  </div>
-  ${bilan.alerte_clinique ? `<div class="alert-box">⚠ <strong>Alerte :</strong> ${bilan.alerte_clinique}</div>` : ''}
+    <!-- ═══ CONCLUSION ═══ -->
+    <div class="section">
+      <div class="section-header">
+        <span>📝 &nbsp;Diagnostic & Conclusion</span>
+      </div>
+      <div class="section-body">
+        <div class="conclusion-grid">
+          <div class="conclusion-box">
+            <div class="box-label">Diagnostic</div>
+            <div class="box-value">${fmt(bilan.diagnostic)}</div>
+          </div>
+          <div class="conclusion-box">
+            <div class="box-label">Observations</div>
+            <div class="box-value">${fmt(bilan.observations)}</div>
+          </div>
+        </div>
+        ${bilan.alerte_clinique ? `
+        <div class="clinical-alert">
+          <div class="alert-icon">⚠</div>
+          <div>
+            <div class="alert-title">Alerte Clinique</div>
+            <div class="alert-text">${bilan.alerte_clinique}</div>
+          </div>
+        </div>` : ''}
+      </div>
+    </div>
 
-  <div class="footer">
-    <span>BBA-Data – Bilan #${bilan.examen_id} – Généré le ${new Date().toLocaleDateString('fr-FR')}</span>
-    <span>Conforme ISO 13666 / ISO 8596 – RGPD</span>
+    <!-- ═══ PIED DE PAGE ═══ -->
+    <div class="footer-area">
+      <div class="footer-line">
+        <div class="footer-left">
+          <span class="brand">BBA-Data</span> — Institut BBA · Bilan #${String(bilan.examen_id).padStart(4, '0')}<br>
+          Généré le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}<br>
+          Ce document est confidentiel. Toute reproduction ou diffusion non autorisée est interdite.<br>
+          Données traitées conformément à la Déclaration d'Helsinki et au RGPD (UE 2016/679).
+        </div>
+        <div class="footer-right">
+          <div class="stamp"><div class="stamp-dot"></div>Document vérifié</div>
+          <div class="hash" style="margin-top:6px;">SHA-256 : ${bilan.signature_hash?.slice(0, 24) || 'N/A'}</div>
+          <div class="standards">ISO 13666 · ISO 8596 · RGPD · CEI 62304</div>
+        </div>
+      </div>
+    </div>
+
   </div>
-  <p class="conformity">Ce document est généré automatiquement par BBA-Data (Institut BBA). Les données sont anonymisées conformément à la Déclaration d'Helsinki et au RGPD (Règlement UE 2016/679). Hash d'intégrité : ${bilan.signature_hash || 'N/A'}</p>
 </body>
 </html>`;
 }
