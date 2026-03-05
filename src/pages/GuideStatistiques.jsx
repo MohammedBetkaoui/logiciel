@@ -926,7 +926,7 @@ export default function GuideStatistiques() {
                   setExpandedId(isOpen ? null : stat.id);
                   if (isOpen && chartVisibleId === stat.id) setChartVisibleId(null);
                 }}
-                className="w-full flex items-center gap-4 p-4 text-left transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-750"
+                className="w-full flex items-center gap-4 p-4 text-left transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-700/50"
               >
                 <div className={`p-2.5 rounded-lg shrink-0 ${stat.color}`}>
                   <Icon size={20} />

@@ -86,7 +86,7 @@ export default function Sidebar({ activePage, onNavigate }) {
       {/* ─── Footer ──────────────────────────────────────────── */}
       <div className="px-4 py-3 border-t border-neutral-800">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-full bg-linear-to-br from-blue-500 to-blue-700 flex items-center justify-center">
             <Heart size={12} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">

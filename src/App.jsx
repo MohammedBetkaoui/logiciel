@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './components/layout/MainLayout';
+import Login from './pages/Login';
 import MedicalDashboard from './pages/MedicalDashboard';
 import Patients from './pages/Patients';
 import Dashboard from './pages/Dashboard';
@@ -27,7 +29,7 @@ const pages = {
   settings: Settings,
 };
 
-export default function App() {
+function AuthenticatedApp() {
   const [activePage, setActivePage] = useState('medical-dashboard');
   const [targetCard, setTargetCard] = useState(null);
   const PageComponent = pages[activePage];
@@ -38,10 +40,23 @@ export default function App() {
   }, []);
 
   return (
+    <MainLayout activePage={activePage} onNavigate={handleNavigate}>
+      <PageComponent onNavigate={handleNavigate} targetCard={targetCard} onTargetCardConsumed={() => setTargetCard(null)} />
+    </MainLayout>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <AuthenticatedApp /> : <Login />;
+}
+
+export default function App() {
+  return (
     <ThemeProvider>
-      <MainLayout activePage={activePage} onNavigate={handleNavigate}>
-        <PageComponent onNavigate={handleNavigate} targetCard={targetCard} onTargetCardConsumed={() => setTargetCard(null)} />
-      </MainLayout>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

@@ -3,10 +3,36 @@
 /* ─── Dark mode via class strategy ─────────────────────────── */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ─── Override Tailwind blue palette with accent (defaults = blue) ── */
+@theme inline {
+  --color-blue-50:  var(--accent-blue-50, #eff6ff);
+  --color-blue-100: var(--accent-blue-100, #dbeafe);
+  --color-blue-200: var(--accent-blue-200, #bfdbfe);
+  --color-blue-300: var(--accent-blue-300, #93c5fd);
+  --color-blue-400: var(--accent-blue-400, #60a5fa);
+  --color-blue-500: var(--accent-blue-500, #3b82f6);
+  --color-blue-600: var(--accent-blue-600, #2563eb);
+  --color-blue-700: var(--accent-blue-700, #1d4ed8);
+  --color-blue-800: var(--accent-blue-800, #1e40af);
+  --color-blue-900: var(--accent-blue-900, #1e3a8a);
+  --color-blue-950: var(--accent-blue-950, #172554);
+}
+
+/* ─── Accent color CSS variables (defaults) ────────────────── */
+:root {
+  --accent-primary: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: #eff6ff;
+  --accent-ring: #3b82f6;
+}
+
 /* ─── Custom utilities ─────────────────────────────────────── */
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.25s ease-out;
+  }
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
   }
 }
 
@@ -30,6 +56,12 @@
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-4px); }
+  30%, 70% { transform: translateX(4px); }
 }
 
 /* ─── Scrollbar styling (Windows 11 / macOS look) ──────────── */
@@ -76,11 +108,11 @@ body {
 
 /* ─── Focus visible (accessibilité WCAG) ──────────────────── */
 :focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 .dark :focus-visible {
-  outline-color: #60a5fa;
+  outline-color: var(--accent-primary);
 }
