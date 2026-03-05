@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────
-# BBA-Data – Serveur FastAPI (server.py)
+# OptiSanté – Serveur FastAPI (server.py)
 # API REST pour le frontend Electron/React
 # ─────────────────────────────────────────────────────────────────
 
@@ -27,10 +27,18 @@ from clinical_engine import (
 from analytics_engine import analyser_bilan_complet, generer_statistiques_bilans
 from rgpd import exporter_csv_anonymise, verifier_consentement, droit_a_loubli
 
-# ─── Resolve base directory (script location) ───────────────
+# ─── Resolve base directory ─────────────────────────────────
+import sys as _sys
 import os as _os
-BASE_DIR = _os.path.dirname(_os.path.abspath(__file__))
-DATA_DIR = _os.path.join(BASE_DIR, "data")
+
+if getattr(_sys, 'frozen', False):
+    # PyInstaller: exe directory
+    BASE_DIR = _os.path.dirname(_sys.executable)
+else:
+    BASE_DIR = _os.path.dirname(_os.path.abspath(__file__))
+
+# Allow override via env var (Electron passes this)
+DATA_DIR = _os.environ.get('BBA_DATA_DIR', _os.path.join(BASE_DIR, "data"))
 _os.makedirs(DATA_DIR, exist_ok=True)
 
 # ─── Logging ──────────────────────────────────────────────────
@@ -39,13 +47,13 @@ logging.basicConfig(
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(_os.path.join(DATA_DIR, "bbadata.log"), encoding="utf-8"),
+        logging.FileHandler(_os.path.join(DATA_DIR, "optisante.log"), encoding="utf-8"),
     ],
 )
-logger = logging.getLogger("bbadata.api")
+logger = logging.getLogger("optisante.api")
 
 # ─── Database connection ─────────────────────────────────────
-DB_PATH = _os.path.join(DATA_DIR, "bbadata.db")
+DB_PATH = _os.path.join(DATA_DIR, "optisante.db")
 db_conn: sqlite3.Connection = None
 
 
@@ -54,15 +62,15 @@ async def lifespan(app: FastAPI):
     global db_conn
     _os.makedirs(DATA_DIR, exist_ok=True)
     db_conn = init_database(DB_PATH)
-    logger.info("Serveur BBA-Data démarré.")
+    logger.info("Serveur OptiSanté démarré.")
     yield
     db_conn.close()
-    logger.info("Serveur BBA-Data arrêté.")
+    logger.info("Serveur OptiSanté arrêté.")
 
 
 app = FastAPI(
-    title="BBA-Data API",
-    description="API d'analyse statistique des bilans optométriques – Institut BBA",
+    title="OptiSanté API",
+    description="API clinique pour logiciel opticien – ISO 13666 / ISO 14971",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -149,7 +157,7 @@ class QueryRequest(BaseModel):
 async def health():
     return {
         "status": "online",
-        "service": "BBA-Data API",
+        "service": "OptiSanté API",
         "version": "1.0.0",
         "timestamp": datetime.now().isoformat(),
     }
@@ -240,18 +248,8 @@ async def create_examen(examen: ExamenCreate):
     if not patient:
         raise HTTPException(404, "Patient non trouvé")
 
-    # Calcul de l'âge (support multiple date formats)
-    date_str = patient["date_naissance"]
-    naissance = None
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d %m %Y"):
-        try:
-            naissance = datetime.strptime(date_str.strip(), fmt).date()
-            break
-        except (ValueError, AttributeError):
-            continue
-    if naissance is None:
-        # Fallback: assume age 30 if date unparseable
-        naissance = date.today().replace(year=date.today().year - 30)
+    # Calcul de l'âge
+    naissance = datetime.strptime(patient["date_naissance"], "%Y-%m-%d").date()
     today = date.today()
     age = today.year - naissance.year - ((today.month, today.day) < (naissance.month, naissance.day))
 
@@ -503,7 +501,7 @@ async def export_anonymised_csv():
     csv_content = exporter_csv_anonymise(data)
     log_audit(db_conn, "system", "EXPORT", "patients+examens", details="Export CSV anonymisé RGPD")
     return PlainTextResponse(csv_content, media_type="text/csv", headers={
-        "Content-Disposition": f"attachment; filename=bbadata_anonyme_{datetime.now().strftime('%Y%m%d')}.csv"
+        "Content-Disposition": f"attachment; filename=optisante_anonyme_{datetime.now().strftime('%Y%m%d')}.csv"
     })
 
 
@@ -644,9 +642,13 @@ async def bilans_stats():
 # ─── Point d'entrée ──────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    import os as _os
-    # Ensure CWD is the backend directory for module resolution
-    _os.chdir(BASE_DIR)
-    # Only reload in development mode
+    is_frozen = getattr(_sys, 'frozen', False)
     is_dev = _os.getenv("NODE_ENV") == "development"
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=is_dev)
+
+    if is_frozen:
+        # PyInstaller: pass app object directly (cannot import by string)
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    else:
+        # Development: use string for hot-reload support
+        _os.chdir(BASE_DIR)
+        uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=is_dev)

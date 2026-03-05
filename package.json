@@ -7,7 +7,8 @@
     "dev:renderer": "vite",
     "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
     "dev": "concurrently -n renderer,electron \"npm run dev:renderer\" \"npm run dev:electron\"",
-    "build": "vite build && electron-builder",
+    "build:backend": "cd backend && python build_backend.py",
+    "build": "npm run build:backend && vite build && electron-builder",
     "preview": "vite preview"
   },
   "keywords": [],
@@ -46,17 +47,14 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "backend/**/*",
-      "!backend/__pycache__/**",
-      "!backend/data/**"
+      "!backend/**"
     ],
     "extraResources": [
       {
-        "from": "backend",
-        "to": "backend",
+        "from": "backend/dist/bba-backend",
+        "to": "backend-dist",
         "filter": [
-          "**/*.py",
-          "requirements.txt"
+          "**/*"
         ]
       }
     ],

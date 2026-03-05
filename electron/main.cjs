@@ -7,7 +7,7 @@ let mainWindow;
 let pythonProcess = null;
 let backendReady = false;
 
-// ─── Find a working Python executable ───────────────────────────
+// ─── Find a working Python executable (dev mode only) ───────────
 function findPython() {
   const candidates = process.platform === 'win32'
     ? ['python', 'python3', 'py']
@@ -24,67 +24,109 @@ function findPython() {
   return null;
 }
 
+// ─── Find the bundled backend executable (production) ───────────
+function findBundledBackend() {
+  const possiblePaths = [
+    path.join(process.resourcesPath, 'backend-dist', 'bba-backend.exe'),
+    path.join(process.resourcesPath, 'backend-dist', 'bba-backend'),
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+  return null;
+}
+
 // ─── Start Python Backend ───────────────────────────────────────
 function startPythonBackend() {
   return new Promise((resolve) => {
-    const pythonCmd = findPython();
-    if (!pythonCmd) {
-      console.error('Python introuvable sur le système');
-      dialog.showMessageBox({
-        type: 'warning',
-        title: 'Backend indisponible',
-        message: 'Python n\'est pas installé ou introuvable.\n\nL\'application s\'ouvrira mais les fonctionnalités backend seront indisponibles.\nInstallez Python 3.8+ depuis python.org puis relancez.',
-      });
-      resolve(false);
-      return;
-    }
+    const isDev = process.env.NODE_ENV === 'development';
 
-    // Determine paths based on environment
-    let backendPath;
-    if (process.env.NODE_ENV === 'development') {
-      backendPath = path.join(__dirname, '..', 'backend');
+    if (isDev) {
+      // ── Development: use system Python ──
+      const pythonCmd = findPython();
+      if (!pythonCmd) {
+        console.error('Python introuvable sur le système');
+        dialog.showMessageBox({
+          type: 'warning',
+          title: 'Backend indisponible',
+          message: 'Python n\'est pas installé ou introuvable.\n\nL\'application s\'ouvrira mais les fonctionnalités backend seront indisponibles.\nInstallez Python 3.8+ depuis python.org puis relancez.',
+        });
+        resolve(false);
+        return;
+      }
+
+      const backendPath = path.join(__dirname, '..', 'backend');
+      const serverScript = path.join(backendPath, 'server.py');
+      if (!fs.existsSync(serverScript)) {
+        console.error(`server.py introuvable: ${serverScript}`);
+        resolve(false);
+        return;
+      }
+
+      console.log(`[DEV] Starting Python backend: ${pythonCmd} ${serverScript}`);
+      try {
+        pythonProcess = spawn(pythonCmd, [serverScript], {
+          cwd: backendPath,
+          env: { ...process.env },
+          windowsHide: true,
+        });
+      } catch (err) {
+        console.error('spawn failed:', err);
+        resolve(false);
+        return;
+      }
     } else {
-      // In production: try extraResources first, then app-relative
-      const resourceBackend = path.join(process.resourcesPath, 'backend');
-      const appBackend = path.join(__dirname, '..', 'backend');
-      backendPath = fs.existsSync(resourceBackend) ? resourceBackend : appBackend;
-    }
+      // ── Production: use bundled .exe ──
+      const bundledExe = findBundledBackend();
+      if (!bundledExe) {
+        console.error('Backend .exe introuvable dans les ressources');
+        dialog.showMessageBox({
+          type: 'error',
+          title: 'Erreur Backend',
+          message: 'Le backend intégré est introuvable.\nL\'application ne fonctionnera pas correctement.\nRéinstallez l\'application.',
+        });
+        resolve(false);
+        return;
+      }
 
-    const serverScript = path.join(backendPath, 'server.py');
-    if (!fs.existsSync(serverScript)) {
-      console.error(`server.py introuvable: ${serverScript}`);
-      resolve(false);
-      return;
-    }
+      const backendDir = path.dirname(bundledExe);
+      // Data directory: persistent location in user's appData
+      const dataDir = path.join(app.getPath('userData'), 'backend-data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      console.log(`[PROD] Starting bundled backend: ${bundledExe}`);
+      console.log(`[PROD] Data directory: ${dataDir}`);
 
-    console.log(`Starting Python backend: ${pythonCmd} ${serverScript}`);
-    console.log(`Backend path: ${backendPath}`);
-
-    try {
-      pythonProcess = spawn(pythonCmd, [serverScript], {
-        cwd: backendPath,
-        env: { ...process.env },
-        windowsHide: true,
-      });
-    } catch (err) {
-      console.error('spawn failed:', err);
-      resolve(false);
-      return;
+      try {
+        pythonProcess = spawn(bundledExe, [], {
+          cwd: backendDir,
+          env: { ...process.env, BBA_DATA_DIR: dataDir },
+          windowsHide: true,
+        });
+      } catch (err) {
+        console.error('spawn failed:', err);
+        resolve(false);
+        return;
+      }
     }
 
     pythonProcess.stdout.on('data', (data) => {
       const msg = data.toString();
-      console.log(`[Python] ${msg}`);
+      console.log(`[Backend] ${msg}`);
       if (msg.includes('Uvicorn running') || msg.includes('Application startup complete')) {
         backendReady = true;
-        console.log('Python backend is ready!');
+        console.log('Backend is ready!');
         resolve(true);
       }
     });
 
     pythonProcess.stderr.on('data', (data) => {
       const msg = data.toString();
-      console.error(`[Python] ${msg}`);
+      console.error(`[Backend] ${msg}`);
       // Uvicorn prints to stderr too
       if (msg.includes('Uvicorn running') || msg.includes('Application startup complete')) {
         backendReady = true;
@@ -93,12 +135,12 @@ function startPythonBackend() {
     });
 
     pythonProcess.on('error', (error) => {
-      console.error('Failed to start Python backend:', error);
+      console.error('Failed to start backend:', error);
       resolve(false);
     });
 
     pythonProcess.on('close', (code) => {
-      console.log(`Python backend exited with code ${code}`);
+      console.log(`Backend exited with code ${code}`);
       pythonProcess = null;
     });
 
@@ -109,7 +151,7 @@ function startPythonBackend() {
         backendReady = pythonProcess != null;
       }
       resolve(backendReady);
-    }, 8000);
+    }, 15000);
   });
 }
 
