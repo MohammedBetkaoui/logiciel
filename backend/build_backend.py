@@ -30,7 +30,7 @@ def build():
         "--workpath", os.path.join(SCRIPT_DIR, "build_temp"),
         "--specpath", SCRIPT_DIR,
         "--noconfirm",                  # Écraser sans demander
-        "--clean",                      # Nettoyer avant de build
+        "--clean",                      # Nettoyer avant de build_
         "--console",                    # Mode console (pour voir les logs)
         # Modules cachés nécessaires
         "--hidden-import", "uvicorn.logging",
