@@ -1,11 +1,9 @@
 import React from 'react';
 import {
-  LayoutDashboard,
   Stethoscope,
   Users,
   ClipboardList,
   Database,
-  FlaskConical,
   Settings,
   ChevronRight,
   Heart,
@@ -19,7 +17,7 @@ const navSections = [
   {
     title: 'Collecte',
     items: [
-      { id: 'medical-dashboard', label: 'Dashboard épidémiologique', icon: Stethoscope },
+      { id: 'medical-dashboard', label: 'Tableau de bord', icon: Stethoscope },
       { id: 'patients', label: 'Patients / Examens', icon: Users },
       { id: 'bilans', label: 'Bilans optométriques', icon: ClipboardList },
     ],
@@ -36,8 +34,6 @@ const navSections = [
     items: [
       { id: 'statistical-analysis', label: 'Analyse statistique', icon: BarChart3 },
       { id: 'guide-statistiques', label: 'Guide des statistiques', icon: HelpCircle },
-      { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-      { id: 'analysis', label: 'Analyse Python', icon: FlaskConical },
       { id: 'normes', label: 'Référentiel normatif', icon: BookOpen },
       { id: 'settings', label: 'Paramètres', icon: Settings },
     ],

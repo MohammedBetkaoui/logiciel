@@ -5,9 +5,7 @@ import MainLayout from './components/layout/MainLayout';
 import Login from './pages/Login';
 import MedicalDashboard from './pages/MedicalDashboard';
 import Patients from './pages/Patients';
-import Dashboard from './pages/Dashboard';
 import Database from './pages/Database';
-import Analysis from './pages/Analysis';
 import Settings from './pages/Settings';
 import Bilans from './pages/Bilans';
 import ImportCSV from './pages/ImportCSV';
@@ -23,9 +21,7 @@ const pages = {
   'statistical-analysis': StatisticalAnalysis,
   normes: NormesReference,
   'guide-statistiques': GuideStatistiques,
-  dashboard: Dashboard,
   database: Database,
-  analysis: Analysis,
   settings: Settings,
 };
 

@@ -260,11 +260,11 @@ const STAT_CARDS = [
     interpretation: 'Astigmatisme « selon la règle » (180° ± 30°) : fréquent chez les jeunes. « Contre la règle » (90° ± 30°) : plus fréquent chez les sujets âgés.',
     utilite: 'Comprend l\'orientation des astigmatismes pour adapter les techniques de correction.',
   },
-  // ═══ Dashboard Épidémiologique ════════════════════════════
+  // ═══ Tableau de bord ════════════════════════════
   {
     id: 'anomalies',
     page: 'medical-dashboard',
-    pageName: 'Dashboard épidémiologique',
+    pageName: 'Tableau de bord',
     titre: 'Prévalence des anomalies',
     icon: AlertTriangle,
     color: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400',
@@ -278,7 +278,7 @@ const STAT_CARDS = [
   {
     id: 'pio',
     page: 'medical-dashboard',
-    pageName: 'Dashboard épidémiologique',
+    pageName: 'Tableau de bord',
     titre: 'Évolution de la PIO',
     icon: TrendingUp,
     color: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
@@ -292,7 +292,7 @@ const STAT_CARDS = [
   {
     id: 'epi-demographics',
     page: 'medical-dashboard',
-    pageName: 'Dashboard épidémiologique',
+    pageName: 'Tableau de bord',
     titre: 'Segmentation démographique (épidémiologique)',
     icon: PieChart,
     color: 'bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400',

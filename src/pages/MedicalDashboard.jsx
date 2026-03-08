@@ -23,6 +23,8 @@ import {
   Download,
   X,
   Maximize2,
+  Clock,
+  HardDrive,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -205,7 +207,7 @@ export default function MedicalDashboard({ targetCard, onTargetCardConsumed }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
-            Dashboard Épidémiologique
+            Tableau de bord
           </h1>
           <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
             Synthèse des bilans optométriques – Institut BBA – Données{' '}
@@ -532,6 +534,74 @@ export default function MedicalDashboard({ targetCard, onTargetCardConsumed }) {
             <ClinicalAlerts alerts={alerts} />
           </Card>
         </div>
+      </div>
+
+      {/* ─── Activité & Statut système ─────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card
+          title="Activité récente"
+          description={alerts.length ? 'Dernières alertes cliniques' : 'Aucune activité'}
+          icon={TrendingUp}
+        >
+          <div className="space-y-3 mt-2">
+            {alerts.length === 0 && (
+              <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4 text-center">Aucune donnée disponible</p>
+            )}
+            {alerts.slice(0, 4).map((a, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      a.niveau_urgence >= 2 ? 'bg-red-400' : 'bg-emerald-400'
+                    }`}
+                  />
+                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                    {a.alerte_clinique} – {a.nom} {a.prenom}
+                  </span>
+                </div>
+                <span className="text-xs text-neutral-400 dark:text-neutral-500">{a.date_examen}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card
+          title="Statut système"
+          description="État des services backend"
+          icon={Clock}
+        >
+          <div className="space-y-3 mt-2">
+            {[
+              { service: 'Serveur FastAPI', status: backendOnline ? 'En ligne' : 'Hors ligne', online: backendOnline },
+              { service: 'Base SQLite', status: 'Prêt', online: true },
+              { service: 'Python Runtime', status: 'Détecté', online: true },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-700 last:border-0"
+              >
+                <span className="text-sm text-neutral-600 dark:text-neutral-300">{item.service}</span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-medium ${
+                      item.online ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-400 dark:text-neutral-500'
+                    }`}
+                  >
+                    {item.status}
+                  </span>
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      item.online ? 'bg-emerald-400' : 'bg-neutral-300 dark:bg-neutral-600'
+                    }`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
   );
