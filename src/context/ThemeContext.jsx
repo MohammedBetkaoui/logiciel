@@ -141,8 +141,8 @@ export function ThemeProvider({ children }) {
 
   const toggleTheme = () => setMode((m) => {
     if (m === 'light') return 'dark';
-    if (m === 'dark') return 'light';
-    return resolveTheme('system') === 'dark' ? 'light' : 'dark';
+    if (m === 'dark') return 'system';
+    return 'light'; // system → light
   });
 
   return (

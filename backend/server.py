@@ -225,6 +225,22 @@ async def create_patient(patient: PatientCreate):
         raise HTTPException(400, str(e))
 
 
+@app.delete("/api/patients/{patient_id}")
+async def delete_patient(patient_id: int):
+    """Supprime un patient et tous ses examens associés."""
+    row = db_conn.execute(
+        "SELECT * FROM patients WHERE patient_id = ? AND est_archive = 0",
+        (patient_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Patient non trouvé")
+    db_conn.execute("DELETE FROM examens WHERE patient_id = ?", (patient_id,))
+    db_conn.execute("DELETE FROM patients WHERE patient_id = ?", (patient_id,))
+    db_conn.commit()
+    log_audit(db_conn, "system", "DELETE", "patients", patient_id)
+    return {"status": "deleted", "patient_id": patient_id}
+
+
 # ═══════════════════════════════════════════════════════════════
 # ROUTES – EXAMENS
 # ═══════════════════════════════════════════════════════════════
@@ -629,6 +645,138 @@ async def get_bilan(examen_id: int):
             "progression_og": analyse.progression_og,
             "risque_global": analyse.risque_global,
             "alertes": analyse.alertes,
+        },
+    }
+
+
+@app.delete("/api/bilans/{examen_id}")
+async def delete_bilan(examen_id: int):
+    """Supprime un bilan (examen)."""
+    row = db_conn.execute(
+        "SELECT * FROM examens WHERE examen_id = ?", (examen_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Bilan non trouvé")
+    db_conn.execute("DELETE FROM examens WHERE examen_id = ?", (examen_id,))
+    db_conn.commit()
+    log_audit(db_conn, "system", "DELETE", "examens", examen_id)
+    return {"status": "deleted", "examen_id": examen_id}
+
+
+@app.put("/api/bilans/{examen_id}")
+async def update_bilan(examen_id: int, examen: ExamenCreate):
+    """Met à jour un bilan existant."""
+    row = db_conn.execute(
+        "SELECT * FROM examens WHERE examen_id = ?", (examen_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Bilan non trouvé")
+
+    # Récupérer l'âge du patient pour l'analyse clinique
+    patient = db_conn.execute(
+        "SELECT date_naissance FROM patients WHERE patient_id = ?",
+        (examen.patient_id,),
+    ).fetchone()
+    if not patient:
+        raise HTTPException(404, "Patient non trouvé")
+
+    naissance = datetime.strptime(patient["date_naissance"], "%Y-%m-%d").date()
+    today = date.today()
+    age = today.year - naissance.year - ((today.month, today.day) < (naissance.month, naissance.day))
+
+    # Analyse clinique automatique
+    exam_data = ExamenComplet(
+        patient_id=examen.patient_id,
+        patient_age=age,
+        date_examen=datetime.now().isoformat(),
+        av_od_sc=examen.av_od_sc,
+        av_og_sc=examen.av_og_sc,
+        av_od_ac=examen.av_od_ac,
+        av_og_ac=examen.av_og_ac,
+        refraction_od=RefractionData(
+            sphere=examen.rx_od_sphere,
+            cylindre=examen.rx_od_cylindre,
+            axe=examen.rx_od_axe,
+            addition=examen.rx_od_addition,
+            prisme=examen.rx_od_prisme,
+            base_prisme=examen.rx_od_base_prisme,
+        ),
+        refraction_og=RefractionData(
+            sphere=examen.rx_og_sphere,
+            cylindre=examen.rx_og_cylindre,
+            axe=examen.rx_og_axe,
+            addition=examen.rx_og_addition,
+            prisme=examen.rx_og_prisme,
+            base_prisme=examen.rx_og_base_prisme,
+        ),
+        pio_od=examen.pio_od,
+        pio_og=examen.pio_og,
+        motilite_oculaire=examen.motilite_oculaire,
+        champ_visuel=examen.champ_visuel,
+    )
+
+    analyse = analyser_examen(exam_data)
+
+    alerte_text = None
+    niveau_urgence = 0
+    if analyse.alertes:
+        alerte_text = " | ".join(a.message for a in analyse.alertes)
+        niveau_urgence = analyse.risque_global
+
+    data = examen.model_dump()
+    data["alerte_clinique"] = alerte_text
+    data["niveau_urgence"] = niveau_urgence
+    data["signature_hash"] = compute_record_hash(data)
+
+    db_conn.execute(
+        """UPDATE examens SET
+            patient_id=?, praticien=?,
+            av_od_sc=?, av_og_sc=?, av_od_ac=?, av_og_ac=?, av_binoculaire=?,
+            auto_od_sphere=?, auto_od_cylindre=?, auto_od_axe=?,
+            auto_og_sphere=?, auto_og_cylindre=?, auto_og_axe=?,
+            rx_od_sphere=?, rx_od_cylindre=?, rx_od_axe=?, rx_od_addition=?, rx_od_prisme=?, rx_od_base_prisme=?,
+            rx_og_sphere=?, rx_og_cylindre=?, rx_og_axe=?, rx_og_addition=?, rx_og_prisme=?, rx_og_base_prisme=?,
+            dp_od=?, dp_og=?, dp_binoculaire=?,
+            pio_od=?, pio_og=?, methode_pio=?,
+            motilite_oculaire=?, cover_test=?, test_couleurs=?, fond_oeil=?, biomicroscopie=?, champ_visuel=?,
+            diagnostic=?, observations=?, alerte_clinique=?, niveau_urgence=?, signature_hash=?
+        WHERE examen_id=?""",
+        (
+            data["patient_id"], data["praticien"],
+            data["av_od_sc"], data["av_og_sc"], data["av_od_ac"], data["av_og_ac"], data["av_binoculaire"],
+            data["auto_od_sphere"], data["auto_od_cylindre"], data["auto_od_axe"],
+            data["auto_og_sphere"], data["auto_og_cylindre"], data["auto_og_axe"],
+            data["rx_od_sphere"], data["rx_od_cylindre"], data["rx_od_axe"],
+            data["rx_od_addition"], data["rx_od_prisme"], data["rx_od_base_prisme"],
+            data["rx_og_sphere"], data["rx_og_cylindre"], data["rx_og_axe"],
+            data["rx_og_addition"], data["rx_og_prisme"], data["rx_og_base_prisme"],
+            data["dp_od"], data["dp_og"], data["dp_binoculaire"],
+            data["pio_od"], data["pio_og"], data["methode_pio"],
+            data["motilite_oculaire"], data["cover_test"], data["test_couleurs"],
+            data["fond_oeil"], data["biomicroscopie"], data["champ_visuel"],
+            data["diagnostic"], data["observations"],
+            data["alerte_clinique"], data["niveau_urgence"], data["signature_hash"],
+            examen_id,
+        ),
+    )
+    db_conn.commit()
+    log_audit(db_conn, data["praticien"], "UPDATE", "examens", examen_id)
+
+    return {
+        "examen_id": examen_id,
+        "status": "updated",
+        "analyse": {
+            "sphere_equivalente_od": analyse.sphere_equivalente_od,
+            "sphere_equivalente_og": analyse.sphere_equivalente_og,
+            "classification_od": analyse.classification_od,
+            "classification_og": analyse.classification_og,
+            "alertes": [
+                {"code": a.code, "message": a.message, "niveau": a.niveau, "recommandation": a.recommandation}
+                for a in analyse.alertes
+            ],
+            "risque_global": analyse.risque_global,
+            "est_valide": analyse.est_valide,
+            "erreurs_validation": analyse.erreurs_validation,
         },
     }
 

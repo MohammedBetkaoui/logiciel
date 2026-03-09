@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Minus, Square, X, Circle, Sun, Moon } from 'lucide-react';
+import { Minus, Square, X, Circle, Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function TitleBar() {
   const [backendOnline, setBackendOnline] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, mode, toggleTheme } = useTheme();
   const api = window.electronAPI;
 
   const checkBackend = useCallback(async () => {
@@ -58,9 +58,18 @@ export default function TitleBar() {
         <button
           onClick={toggleTheme}
           className="p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-colors"
-          aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+          aria-label={
+            mode === 'light' ? 'Passer en mode sombre' :
+            mode === 'dark' ? 'Passer en mode système' :
+            'Passer en mode clair'
+          }
+          title={
+            mode === 'light' ? 'Mode clair' :
+            mode === 'dark' ? 'Mode sombre' :
+            'Mode système'
+          }
         >
-          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          {mode === 'light' ? <Sun size={14} /> : mode === 'dark' ? <Moon size={14} /> : <Monitor size={14} />}
         </button>
         <div className="w-px h-4 bg-neutral-700 mx-1" />
         <button

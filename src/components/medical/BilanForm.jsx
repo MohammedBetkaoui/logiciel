@@ -141,7 +141,7 @@ function FieldError({ message }) {
 // COMPOSANT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
-export default function BilanForm({ patientId, onSaved, existingData }) {
+export default function BilanForm({ patientId, onSaved, existingData, examenId }) {
   const {
     register,
     handleSubmit,
@@ -207,8 +207,13 @@ export default function BilanForm({ patientId, onSaved, existingData }) {
       cleaned.patient_id = Number(pid);
       if (!cleaned.praticien) cleaned.praticien = 'Dr. Praticien';
 
-      const res = await fetch('http://localhost:8000/api/examens', {
-        method: 'POST',
+      const url = examenId
+        ? `http://localhost:8000/api/bilans/${examenId}`
+        : 'http://localhost:8000/api/examens';
+      const method = examenId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleaned),
       });
@@ -644,7 +649,7 @@ export default function BilanForm({ patientId, onSaved, existingData }) {
           {submitResult.success ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
           <div>
             <p className="font-semibold">
-              {submitResult.success ? 'Bilan enregistré avec succès' : 'Erreur'}
+              {submitResult.success ? (examenId ? 'Bilan mis à jour avec succès' : 'Bilan enregistré avec succès') : 'Erreur'}
             </p>
             {submitResult.success && submitResult.data?.analyse && (
               <div className="mt-2 space-y-1 text-xs">
@@ -686,7 +691,7 @@ export default function BilanForm({ patientId, onSaved, existingData }) {
           ) : (
             <Save size={16} />
           )}
-          {isSubmitting ? 'Enregistrement...' : 'Enregistrer le bilan'}
+          {isSubmitting ? 'Enregistrement...' : (examenId ? 'Mettre à jour le bilan' : 'Enregistrer le bilan')}
         </button>
       </div>
     </form>

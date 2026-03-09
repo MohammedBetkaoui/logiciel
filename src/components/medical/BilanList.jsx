@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Search, Filter, ChevronDown, ChevronUp, Eye,
+  Search, Filter, ChevronDown, ChevronUp, Eye, Pencil, Trash2,
   Calendar, AlertTriangle, ArrowUpDown, RefreshCw,
   FileText, User, Clock, Loader2,
 } from 'lucide-react';
@@ -47,7 +47,7 @@ function formatDate(dateStr) {
 // COMPOSANT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
-export default function BilanList({ onSelectBilan }) {
+export default function BilanList({ onSelectBilan, onEditBilan }) {
   const [bilans, setBilans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,6 +57,7 @@ export default function BilanList({ onSelectBilan }) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // ─── Chargement des bilans ─────────────────────────────────
   const loadBilans = useCallback(async () => {
@@ -75,6 +76,21 @@ export default function BilanList({ onSelectBilan }) {
   }, []);
 
   useEffect(() => { loadBilans(); }, [loadBilans]);
+
+  // ─── Suppression d'un bilan ────────────────────────────────
+  const handleDeleteBilan = async (examenId) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/bilans/${examenId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setBilans((prev) => prev.filter((b) => b.examen_id !== examenId));
+        setDeleteConfirm(null);
+      }
+    } catch {
+      // error
+    }
+  };
 
   // ─── Filtrage & Tri ────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -271,7 +287,7 @@ export default function BilanList({ onSelectBilan }) {
                     </th>
                   ))}
                   <th className="px-4 py-3 text-right text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Action
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -313,12 +329,29 @@ export default function BilanList({ onSelectBilan }) {
                       {b.diagnostic || '—'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onSelectBilan?.(b.examen_id); }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                      >
-                        <Eye size={13} /> Voir
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onSelectBilan?.(b.examen_id); }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Voir le détail"
+                        >
+                          <Eye size={13} /> Voir
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onEditBilan?.(b.examen_id); }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                          title="Modifier le bilan"
+                        >
+                          <Pencil size={13} /> Modifier
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteConfirm(b.examen_id); }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Supprimer le bilan"
+                        >
+                          <Trash2 size={13} /> Supprimer
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -327,6 +360,40 @@ export default function BilanList({ onSelectBilan }) {
           </div>
         )}
       </div>
+
+      {/* ─── Modal de confirmation de suppression ─────────── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-xl p-6 max-w-sm w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <Trash2 size={18} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Supprimer le bilan</h3>
+                <p className="text-xs text-neutral-400">Cette action est irréversible</p>
+              </div>
+            </div>
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-5">
+              Êtes-vous sûr de vouloir supprimer ce bilan optométrique ?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleDeleteBilan(deleteConfirm)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
