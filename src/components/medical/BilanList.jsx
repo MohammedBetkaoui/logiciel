@@ -54,6 +54,7 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterUrgence, setFilterUrgence] = useState('all');
+  const [filterSexe, setFilterSexe] = useState('all');
   const [sortField, setSortField] = useState('date_examen');
   const [sortDir, setSortDir] = useState('desc');
   const [dateFrom, setDateFrom] = useState('');
@@ -116,6 +117,11 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
       result = result.filter((b) => b.niveau_urgence === Number(filterUrgence));
     }
 
+    // Filtre sexe
+    if (filterSexe !== 'all') {
+      result = result.filter((b) => (b.sexe || '').toLowerCase() === filterSexe.toLowerCase());
+    }
+
     // Filtre date
     if (dateFrom) {
       result = result.filter((b) => b.date_examen >= dateFrom);
@@ -138,10 +144,12 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
     });
 
     return result;
-  }, [bilans, searchTerm, filterUrgence, sortField, sortDir, dateFrom, dateTo]);
+  }, [bilans, searchTerm, filterUrgence, filterSexe, sortField, sortDir, dateFrom, dateTo]);
 
   // Reset page when filters change
-  useEffect(() => { setPage(0); }, [searchTerm, filterUrgence, sortField, sortDir, dateFrom, dateTo]);
+  useEffect(() => { setPage(0); }, [searchTerm, filterUrgence, filterSexe, sortField, sortDir, dateFrom, dateTo]);
+
+  const activeFilterCount = [filterUrgence !== 'all', filterSexe !== 'all', dateFrom, dateTo].filter(Boolean).length;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
@@ -190,7 +198,7 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
                 : 'bg-white border-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'
             }`}
           >
-            <Filter size={13} /> Filtres
+            <Filter size={13} /> Filtres{activeFilterCount > 0 && ` (${activeFilterCount})`}
           </button>
           <button
             onClick={loadBilans}
@@ -216,7 +224,7 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
       {/* ─── Filtres avancés ────────────────────────────────── */}
       {showFilters && (
         <div className="p-4 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Niveau d'urgence</label>
               <select
@@ -229,6 +237,18 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
                 <option value="1">Surveillance</option>
                 <option value="2">Référé</option>
                 <option value="3">Urgence</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Sexe</label>
+              <select
+                value={filterSexe}
+                onChange={(e) => setFilterSexe(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
+              >
+                <option value="all">Tous</option>
+                <option value="Homme">Homme</option>
+                <option value="Femme">Femme</option>
               </select>
             </div>
             <div className="space-y-1">
@@ -251,7 +271,7 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
             </div>
           </div>
           <button
-            onClick={() => { setFilterUrgence('all'); setDateFrom(''); setDateTo(''); setSearchTerm(''); }}
+            onClick={() => { setFilterUrgence('all'); setFilterSexe('all'); setDateFrom(''); setDateTo(''); setSearchTerm(''); }}
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
           >
             Réinitialiser les filtres
@@ -344,24 +364,24 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); onSelectBilan?.(b.examen_id); }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title="Voir le détail"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Voir"
                         >
-                          <Eye size={13} /> Voir
+                          <Eye size={13} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onEditBilan?.(b.examen_id); }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
-                          title="Modifier le bilan"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                          title="Modifier"
                         >
-                          <Pencil size={13} /> Modifier
+                          <Pencil size={13} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeleteConfirm(b.examen_id); }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          title="Supprimer le bilan"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Supprimer"
                         >
-                          <Trash2 size={13} /> Supprimer
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </td>

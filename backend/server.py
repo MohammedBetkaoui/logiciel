@@ -250,6 +250,32 @@ async def delete_patient(patient_id: int):
     return {"status": "deleted", "patient_id": patient_id}
 
 
+@app.put("/api/patients/{patient_id}")
+async def update_patient(patient_id: int, patient: PatientCreate):
+    """Met à jour les informations d'un patient."""
+    row = db_conn.execute(
+        "SELECT * FROM patients WHERE patient_id = ? AND est_archive = 0",
+        (patient_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Patient non trouvé")
+    db_conn.execute(
+        """UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, adresse=?, code_postal=?,
+           ville=?, telephone=?, email=?, numero_securite_sociale=?, mutuelle=?,
+           numero_adherent=?, consentement_rgpd=?, date_modification=datetime('now')
+           WHERE patient_id=?""",
+        (
+            patient.nom, patient.prenom, patient.date_naissance, patient.sexe,
+            patient.adresse, patient.code_postal, patient.ville, patient.telephone,
+            patient.email, patient.numero_securite_sociale, patient.mutuelle,
+            patient.numero_adherent, patient.consentement_rgpd, patient_id,
+        ),
+    )
+    db_conn.commit()
+    log_audit(db_conn, "system", "UPDATE", "patients", patient_id)
+    return {"status": "updated", "patient_id": patient_id}
+
+
 # ═══════════════════════════════════════════════════════════════
 # ROUTES – EXAMENS
 # ═══════════════════════════════════════════════════════════════
@@ -911,6 +937,37 @@ async def bilans_simples_stats():
         "acuite_visuelle": acuite_map,
         "statut_refractif": statut_map,
     }
+
+
+@app.get("/api/bilans-simples/{bilan_id}")
+async def get_bilan_simple(bilan_id: int):
+    """Récupère un bilan simple par ID."""
+    row = db_conn.execute(
+        "SELECT * FROM bilans_simples WHERE bilan_simple_id = ?", (bilan_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Bilan simple non trouvé")
+    log_audit(db_conn, "system", "READ", "bilans_simples", bilan_id)
+    return dict(row)
+
+
+@app.put("/api/bilans-simples/{bilan_id}")
+async def update_bilan_simple(bilan_id: int, bilan: BilanSimpleCreate):
+    """Met à jour un bilan simple."""
+    row = db_conn.execute(
+        "SELECT * FROM bilans_simples WHERE bilan_simple_id = ?", (bilan_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Bilan simple non trouvé")
+    db_conn.execute(
+        """UPDATE bilans_simples SET age=?, sexe=?, ametropie=?, anomalies=?,
+           acuite_visuelle=?, statut_refractif=? WHERE bilan_simple_id=?""",
+        (bilan.age, bilan.sexe, bilan.ametropie, bilan.anomalies,
+         bilan.acuite_visuelle, bilan.statut_refractif, bilan_id),
+    )
+    db_conn.commit()
+    log_audit(db_conn, "system", "UPDATE", "bilans_simples", bilan_id)
+    return {"status": "updated", "bilan_simple_id": bilan_id}
 
 
 @app.delete("/api/bilans-simples/{bilan_id}")

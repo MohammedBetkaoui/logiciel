@@ -38,14 +38,28 @@ const ACUITE_VISUELLE_OPTIONS = [
 
 const STATUT_REFRACTIF_OPTIONS = ['Emmetrope', 'Non emmetrope'];
 
-export default function BilanSimpleForm({ onSaved }) {
-  const [formData, setFormData] = useState({
-    age: '',
-    sexe: '',
-    ametropie: [],
-    anomalies: [],
-    acuite_visuelle: '',
-    statut_refractif: '',
+export default function BilanSimpleForm({ onSaved, existingData = null }) {
+  const isEditMode = !!existingData;
+
+  const [formData, setFormData] = useState(() => {
+    if (existingData) {
+      return {
+        age: existingData.age ?? '',
+        sexe: existingData.sexe ?? '',
+        ametropie: existingData.ametropie ? existingData.ametropie.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        anomalies: existingData.anomalies ? existingData.anomalies.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        acuite_visuelle: existingData.acuite_visuelle ?? '',
+        statut_refractif: existingData.statut_refractif ?? '',
+      };
+    }
+    return {
+      age: '',
+      sexe: '',
+      ametropie: [],
+      anomalies: [],
+      acuite_visuelle: '',
+      statut_refractif: '',
+    };
   });
 
   const [errors, setErrors] = useState({});
@@ -113,8 +127,11 @@ export default function BilanSimpleForm({ onSaved }) {
         statut_refractif: formData.statut_refractif,
       };
 
-      const res = await fetch('http://localhost:8000/api/bilans-simples', {
-        method: 'POST',
+      const url = isEditMode
+        ? `http://localhost:8000/api/bilans-simples/${existingData.bilan_simple_id}`
+        : 'http://localhost:8000/api/bilans-simples';
+      const res = await fetch(url, {
+        method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
@@ -126,14 +143,16 @@ export default function BilanSimpleForm({ onSaved }) {
 
       const result = await res.json();
       setSubmitResult({ success: true, data: result });
-      setFormData({
-        age: '',
-        sexe: '',
-        ametropie: [],
-        anomalies: [],
-        acuite_visuelle: '',
-        statut_refractif: '',
-      });
+      if (!isEditMode) {
+        setFormData({
+          age: '',
+          sexe: '',
+          ametropie: [],
+          anomalies: [],
+          acuite_visuelle: '',
+          statut_refractif: '',
+        });
+      }
       if (onSaved) onSaved(result);
     } catch (err) {
       setSubmitResult({ success: false, error: err.message });
@@ -152,7 +171,7 @@ export default function BilanSimpleForm({ onSaved }) {
         <div className="flex items-center gap-2.5 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-700">
           <Eye size={18} className="text-blue-500" />
           <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-            Bilan Simplifié – Dépistage Rapide
+            {isEditMode ? 'Modifier le Bilan Simplifié' : 'Bilan Simplifié – Dépistage Rapide'}
           </span>
         </div>
 
@@ -318,7 +337,7 @@ export default function BilanSimpleForm({ onSaved }) {
           className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
         >
           {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSubmitting ? 'Enregistrement...' : 'Enregistrer le Bilan'}
+          {isSubmitting ? 'Enregistrement...' : isEditMode ? 'Mettre à jour' : 'Enregistrer le Bilan'}
         </button>
 
         {submitResult && (
@@ -330,7 +349,7 @@ export default function BilanSimpleForm({ onSaved }) {
             }`}
           >
             {submitResult.success ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-            {submitResult.success ? 'Bilan enregistré avec succès' : submitResult.error}
+            {submitResult.success ? (isEditMode ? 'Bilan mis à jour avec succès' : 'Bilan enregistré avec succès') : submitResult.error}
           </div>
         )}
       </div>

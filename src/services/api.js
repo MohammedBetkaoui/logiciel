@@ -58,6 +58,10 @@ export async function deletePatient(id) {
   return apiCall(`/api/patients/${id}`, { method: 'DELETE' });
 }
 
+export async function updatePatient(id, data) {
+  return apiCall(`/api/patients/${id}`, { method: 'PUT', body: data });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // EXAMENS
 // ═══════════════════════════════════════════════════════════════
@@ -94,8 +98,16 @@ export async function createBilanSimple(data) {
   return apiCall('/api/bilans-simples', { method: 'POST', body: data });
 }
 
+export async function getBilanSimple(id) {
+  return apiCall(`/api/bilans-simples/${id}`);
+}
+
 export async function deleteBilanSimple(id) {
   return apiCall(`/api/bilans-simples/${id}`, { method: 'DELETE' });
+}
+
+export async function updateBilanSimple(id, data) {
+  return apiCall(`/api/bilans-simples/${id}`, { method: 'PUT', body: data });
 }
 
 export async function getBilansSimplesStats() {
