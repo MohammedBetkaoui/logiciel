@@ -1,7 +1,14 @@
-import React from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 15;
 
 export default function DataTable({ columns, data, isLoading }) {
+  const [page, setPage] = useState(0);
+
+  const totalPages = Math.max(1, Math.ceil((data?.length || 0) / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  if (safePage !== page) setPage(safePage);
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200/80 dark:border-neutral-700 shadow-sm overflow-hidden">
@@ -50,7 +57,7 @@ export default function DataTable({ columns, data, isLoading }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-            {data.map((row, rowIdx) => (
+            {data.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE).map((row, rowIdx) => (
               <tr
                 key={rowIdx}
                 className="hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors duration-150"
@@ -71,14 +78,35 @@ export default function DataTable({ columns, data, isLoading }) {
       {/* ─── Pagination footer ────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-100 dark:border-neutral-700 bg-neutral-50/40 dark:bg-neutral-800/50">
         <span className="text-xs text-neutral-400 dark:text-neutral-500">
-          {data.length} résultat{data.length > 1 ? 's' : ''}
+          {safePage * PAGE_SIZE + 1} - {Math.min((safePage + 1) * PAGE_SIZE, data.length)} sur {data.length}
         </span>
-        <div className="flex gap-1">
-          <button className="px-3 py-1 text-xs rounded-md bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600 transition-colors">
-            Précédent
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600"
+          >
+            <ChevronLeft size={14} /> Précédent
           </button>
-          <button className="px-3 py-1 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-            Suivant
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              className={`w-7 h-7 text-xs rounded-md font-medium transition-colors ${
+                i === safePage
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600'
+              }`}
+            >
+              {i + 1}
+            </button>
+          )).slice(Math.max(0, safePage - 2), safePage + 3)}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage >= totalPages - 1}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600"
+          >
+            Suivant <ChevronRight size={14} />
           </button>
         </div>
       </div>

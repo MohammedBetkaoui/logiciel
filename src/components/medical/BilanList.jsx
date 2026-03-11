@@ -377,7 +377,7 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
       {filtered.length > PAGE_SIZE && (
         <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
           <span className="text-xs text-neutral-400 dark:text-neutral-500">
-            {from}–{to} sur {filtered.length}
+            {from} - {to} sur {filtered.length}
           </span>
           <div className="flex items-center gap-1">
             <button

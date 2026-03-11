@@ -253,7 +253,7 @@ export default function BilanSimpleList() {
       {filtered.length > PAGE_SIZE && (
         <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
           <span className="text-xs text-neutral-400 dark:text-neutral-500">
-            {from}\u2013{to} sur {filtered.length}
+            {from} - {to} sur {filtered.length}
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -261,7 +261,7 @@ export default function BilanSimpleList() {
               disabled={safePage === 0}
               className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600"
             >
-              <ChevronLeft size={14} /> Pr\u00e9c\u00e9dent
+              <ChevronLeft size={14} /> Précédent
             </button>
             {Array.from({ length: totalPages }, (_, i) => (
               <button
