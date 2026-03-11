@@ -3,7 +3,6 @@ import {
   Stethoscope,
   Users,
   ClipboardList,
-  Database,
   Settings,
   ChevronRight,
   Heart,
@@ -15,26 +14,25 @@ import {
 
 const navSections = [
   {
-    title: 'Collecte',
+    title: 'Données',
     items: [
       { id: 'medical-dashboard', label: 'Tableau de bord', icon: Stethoscope },
-      { id: 'patients', label: 'Patients / Examens', icon: Users },
-      { id: 'bilans', label: 'Bilans optométriques', icon: ClipboardList },
-    ],
-  },
-  {
-    title: 'Transfert',
-    items: [
-      { id: 'import-csv', label: 'Import CSV', icon: FileUp },
-      { id: 'database', label: 'Base de données', icon: Database },
+      { id: 'patients', label: 'Patients', icon: Users },
+      { id: 'bilans', label: 'Bilans', icon: ClipboardList },
+      { id: 'import-csv', label: 'Importer', icon: FileUp },
     ],
   },
   {
     title: 'Analyse',
     items: [
-      { id: 'statistical-analysis', label: 'Analyse statistique', icon: BarChart3 },
-      { id: 'guide-statistiques', label: 'Guide des statistiques', icon: HelpCircle },
-      { id: 'normes', label: 'Référentiel normatif', icon: BookOpen },
+      { id: 'statistical-analysis', label: 'Statistiques', icon: BarChart3 },
+      { id: 'guide-statistiques', label: 'Guide', icon: HelpCircle },
+      { id: 'normes', label: 'Normes', icon: BookOpen },
+    ],
+  },
+  {
+    title: 'Système',
+    items: [
       { id: 'settings', label: 'Paramètres', icon: Settings },
     ],
   },

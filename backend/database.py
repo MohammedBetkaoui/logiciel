@@ -185,6 +185,20 @@ CREATE TABLE IF NOT EXISTS schema_version (
     description TEXT
 );
 
+-- ═══════════════════════════════════════════════════════════════
+-- TABLE: bilans_simples – Bilan simplifié (dépistage rapide)
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS bilans_simples (
+    bilan_simple_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    age                 INTEGER NOT NULL,
+    sexe                TEXT CHECK(sexe IN ('Homme','Femme')) NOT NULL,
+    ametropie           TEXT NOT NULL,           -- Valeurs séparées par virgule
+    anomalies           TEXT,           -- Valeurs séparées par virgule
+    acuite_visuelle     TEXT,           -- ex: "10/10"
+    statut_refractif    TEXT CHECK(statut_refractif IN ('Emmetrope','Non emmetrope')) NOT NULL,
+    date_creation       TEXT DEFAULT (datetime('now'))
+);
+
 -- ─── Index pour performances ──────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_patients_nom ON patients(nom, prenom);
 CREATE INDEX IF NOT EXISTS idx_examens_patient ON examens(patient_id, date_examen);

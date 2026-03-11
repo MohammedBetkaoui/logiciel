@@ -7,8 +7,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search, Filter, ChevronDown, ChevronUp, Eye, Pencil, Trash2,
   Calendar, AlertTriangle, ArrowUpDown, RefreshCw,
-  FileText, User, Clock, Loader2,
+  FileText, User, Clock, Loader2, ChevronLeft, ChevronRight,
 } from 'lucide-react';
+
+const PAGE_SIZE = 15;
 
 // ─── Badge de niveau d'urgence ───────────────────────────────
 function UrgenceBadge({ niveau }) {
@@ -58,6 +60,7 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
   const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [page, setPage] = useState(0);
 
   // ─── Chargement des bilans ─────────────────────────────────
   const loadBilans = useCallback(async () => {
@@ -136,6 +139,15 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
 
     return result;
   }, [bilans, searchTerm, filterUrgence, sortField, sortDir, dateFrom, dateTo]);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(0); }, [searchTerm, filterUrgence, sortField, sortDir, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paged = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const from = filtered.length === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const to = Math.min((safePage + 1) * PAGE_SIZE, filtered.length);
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -292,7 +304,7 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50 dark:divide-neutral-700/50">
-                {filtered.map((b) => (
+                {paged.map((b) => (
                   <tr
                     key={b.examen_id}
                     onClick={() => onSelectBilan?.(b.examen_id)}
@@ -360,6 +372,44 @@ export default function BilanList({ onSelectBilan, onEditBilan }) {
           </div>
         )}
       </div>
+
+      {/* ─── Pagination ─────────────────────────────────────── */}
+      {filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+          <span className="text-xs text-neutral-400 dark:text-neutral-500">
+            {from}–{to} sur {filtered.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600"
+            >
+              <ChevronLeft size={14} /> Précédent
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                className={`w-7 h-7 text-xs rounded-md font-medium transition-colors ${
+                  i === safePage
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                }`}
+              >
+                {i + 1}
+              </button>
+            )).slice(Math.max(0, safePage - 2), safePage + 3)}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={safePage >= totalPages - 1}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600"
+            >
+              Suivant <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── Modal de confirmation de suppression ─────────── */}
       {deleteConfirm && (

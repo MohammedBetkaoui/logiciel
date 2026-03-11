@@ -149,6 +149,15 @@ class QueryRequest(BaseModel):
     query: str
 
 
+class BilanSimpleCreate(BaseModel):
+    age: int = Field(ge=0, le=150)
+    sexe: str = Field(pattern=r"^(Homme|Femme)$")
+    ametropie: str  # Valeurs séparées par virgule (ex: "Myopie, Astigmatisme")
+    anomalies: Optional[str] = None
+    acuite_visuelle: Optional[str] = None
+    statut_refractif: str = Field(pattern=r"^(Emmetrope|Non emmetrope)$")
+
+
 # ═══════════════════════════════════════════════════════════════
 # ROUTES – SANTÉ
 # ═══════════════════════════════════════════════════════════════
@@ -785,6 +794,137 @@ async def update_bilan(examen_id: int, examen: ExamenCreate):
 async def bilans_stats():
     """Statistiques agrégées sur l'ensemble des bilans."""
     return generer_statistiques_bilans(db_conn)
+
+
+# ═══════════════════════════════════════════════════════════════
+# ROUTES – BILANS SIMPLES (dépistage rapide)
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/api/bilans-simples")
+async def list_bilans_simples(
+    limit: int = Query(default=200, le=1000),
+    offset: int = 0,
+):
+    """Liste tous les bilans simples."""
+    rows = db_conn.execute(
+        "SELECT * FROM bilans_simples ORDER BY date_creation DESC LIMIT ? OFFSET ?",
+        (limit, offset),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/bilans-simples")
+async def create_bilan_simple(bilan: BilanSimpleCreate):
+    """Crée un bilan simple (dépistage rapide)."""
+    try:
+        cursor = db_conn.execute(
+            """INSERT INTO bilans_simples (age, sexe, ametropie, anomalies, acuite_visuelle, statut_refractif)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (bilan.age, bilan.sexe, bilan.ametropie, bilan.anomalies,
+             bilan.acuite_visuelle, bilan.statut_refractif),
+        )
+        db_conn.commit()
+        bilan_id = cursor.lastrowid
+        log_audit(db_conn, "system", "CREATE", "bilans_simples", bilan_id)
+        return {"bilan_simple_id": bilan_id, "status": "created"}
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/bilans-simples/stats")
+async def bilans_simples_stats():
+    """Statistiques agrégées sur les bilans simplifiés."""
+    rows = db_conn.execute(
+        "SELECT * FROM bilans_simples ORDER BY date_creation DESC"
+    ).fetchall()
+    bilans = [dict(r) for r in rows]
+    total = len(bilans)
+
+    # Répartition par sexe
+    sexe_map = {}
+    for b in bilans:
+        s = b.get("sexe", "Inconnu")
+        sexe_map[s] = sexe_map.get(s, 0) + 1
+
+    # Répartition par tranche d'âge
+    age_map = {}
+    for b in bilans:
+        age = b.get("age")
+        if age is None:
+            t = "Inconnu"
+        elif age < 10:
+            t = "0-9 ans"
+        elif age < 20:
+            t = "10-19 ans"
+        elif age < 30:
+            t = "20-29 ans"
+        elif age < 40:
+            t = "30-39 ans"
+        elif age < 50:
+            t = "40-49 ans"
+        elif age < 60:
+            t = "50-59 ans"
+        else:
+            t = "60+ ans"
+        age_map[t] = age_map.get(t, 0) + 1
+
+    # Répartition des amétropies
+    ametropie_map = {}
+    for b in bilans:
+        val = b.get("ametropie", "")
+        if val:
+            for a in val.split(","):
+                a = a.strip()
+                if a:
+                    ametropie_map[a] = ametropie_map.get(a, 0) + 1
+
+    # Répartition des anomalies
+    anomalies_map = {}
+    for b in bilans:
+        val = b.get("anomalies", "")
+        if val:
+            for a in val.split(","):
+                a = a.strip()
+                if a:
+                    anomalies_map[a] = anomalies_map.get(a, 0) + 1
+
+    # Répartition acuité visuelle
+    acuite_map = {}
+    for b in bilans:
+        val = b.get("acuite_visuelle", "")
+        if val:
+            acuite_map[val] = acuite_map.get(val, 0) + 1
+
+    # Statut réfractif
+    statut_map = {}
+    for b in bilans:
+        val = b.get("statut_refractif", "")
+        if val:
+            statut_map[val] = statut_map.get(val, 0) + 1
+
+    return {
+        "total": total,
+        "sexe": sexe_map,
+        "tranches_age": age_map,
+        "ametropies": ametropie_map,
+        "anomalies": anomalies_map,
+        "acuite_visuelle": acuite_map,
+        "statut_refractif": statut_map,
+    }
+
+
+@app.delete("/api/bilans-simples/{bilan_id}")
+async def delete_bilan_simple(bilan_id: int):
+    """Supprime un bilan simple."""
+    row = db_conn.execute(
+        "SELECT * FROM bilans_simples WHERE bilan_simple_id = ?", (bilan_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Bilan simple non trouvé")
+    db_conn.execute("DELETE FROM bilans_simples WHERE bilan_simple_id = ?", (bilan_id,))
+    db_conn.commit()
+    log_audit(db_conn, "system", "DELETE", "bilans_simples", bilan_id)
+    return {"status": "deleted", "bilan_simple_id": bilan_id}
 
 
 # ─── Point d'entrée ──────────────────────────────────────────

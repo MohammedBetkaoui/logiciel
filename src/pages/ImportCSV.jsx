@@ -18,7 +18,7 @@ import {
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
-// ─── Mapping colonnes CSV attendues ─────────────────────────
+// ─── Mapping colonnes CSV attendues (Bilan Complet) ─────────
 const EXPECTED_COLUMNS = [
   'nom', 'prenom', 'date_naissance', 'sexe', 'telephone', 'email', 'ville',
   'motif_consultation', 'antecedents_oculaires', 'antecedents_generaux',
@@ -34,6 +34,17 @@ const EXPECTED_COLUMNS = [
 ];
 
 const REQUIRED_COLUMNS = ['nom', 'prenom', 'date_naissance', 'sexe'];
+
+// ─── Mapping colonnes CSV (Bilan Simplifié) ─────────────────
+const EXPECTED_COLUMNS_SIMPLE = [
+  'age', 'sexe', 'ametropie', 'anomalies', 'acuite_visuelle', 'statut_refractif',
+];
+
+const REQUIRED_COLUMNS_SIMPLE = ['age', 'sexe', 'ametropie', 'acuite_visuelle', 'statut_refractif'];
+
+const VALID_AMETROPIES = ['Myopie', 'Hypermetropie', 'Astigmatisme', 'Presbytie', 'Anisometropie'];
+const VALID_ANOMALIES = ['Strabisme', 'Amblyopie', 'Nystagmus', 'Daltonisme', 'Ptosis', 'Cataracte', 'Glaucome', 'Keratocone', 'Aucune'];
+const VALID_STATUT = ['Emmetrope', 'Non emmetrope'];
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -92,8 +103,38 @@ function validateRow(row, idx) {
   return warnings;
 }
 
+function validateRowSimple(row, idx) {
+  const warnings = [];
+  for (const col of REQUIRED_COLUMNS_SIMPLE) {
+    if (!row[col]) warnings.push({ line: idx + 2, col, level: 'error', msg: `${col} manquant` });
+  }
+  const age = parseInt(row.age);
+  if (row.age && (isNaN(age) || age < 0 || age > 150))
+    warnings.push({ line: idx + 2, col: 'age', level: 'error', msg: `Âge invalide: ${row.age}` });
+  if (row.sexe && !['Homme', 'Femme'].includes(row.sexe))
+    warnings.push({ line: idx + 2, col: 'sexe', level: 'warning', msg: `Sexe non reconnu: ${row.sexe}` });
+  if (row.ametropie) {
+    const vals = row.ametropie.split(',').map((s) => s.trim());
+    vals.forEach((v) => {
+      if (!VALID_AMETROPIES.includes(v))
+        warnings.push({ line: idx + 2, col: 'ametropie', level: 'warning', msg: `Amétropie non reconnue: ${v}` });
+    });
+  }
+  if (row.anomalies) {
+    const vals = row.anomalies.split(',').map((s) => s.trim());
+    vals.forEach((v) => {
+      if (!VALID_ANOMALIES.includes(v))
+        warnings.push({ line: idx + 2, col: 'anomalies', level: 'warning', msg: `Anomalie non reconnue: ${v}` });
+    });
+  }
+  if (row.statut_refractif && !VALID_STATUT.includes(row.statut_refractif))
+    warnings.push({ line: idx + 2, col: 'statut_refractif', level: 'warning', msg: `Statut réfractif non reconnu: ${row.statut_refractif}` });
+  return warnings;
+}
+
 export default function ImportCSV() {
   const fileRef = useRef(null);
+  const [importMode, setImportMode] = useState('complet'); // 'complet' | 'simple'
   const [file, setFile] = useState(null);
   const [parsed, setParsed] = useState(null);
   const [validations, setValidations] = useState([]);
@@ -110,12 +151,12 @@ export default function ImportCSV() {
     reader.onload = (ev) => {
       const { headers, rows, errors } = parseCSV(ev.target.result);
       setParsed({ headers, rows, parseErrors: errors });
-      // Validate all rows
-      const allWarnings = rows.flatMap((row, i) => validateRow(row, i));
+      const validateFn = importMode === 'simple' ? validateRowSimple : validateRow;
+      const allWarnings = rows.flatMap((row, i) => validateFn(row, i));
       setValidations(allWarnings);
     };
     reader.readAsText(f, 'utf-8');
-  }, []);
+  }, [importMode]);
 
   const handleImport = useCallback(async () => {
     if (!parsed?.rows.length) return;
@@ -258,6 +299,48 @@ export default function ImportCSV() {
     setImporting(false);
   }, [parsed]);
 
+  const handleImportSimple = useCallback(async () => {
+    if (!parsed?.rows.length) return;
+    setImporting(true);
+    setResult(null);
+    let success = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const row of parsed.rows) {
+      try {
+        const payload = {
+          age: parseInt(row.age),
+          sexe: row.sexe || 'Homme',
+          ametropie: (row.ametropie || '').trim(),
+          anomalies: (row.anomalies || '').trim() || null,
+          acuite_visuelle: (row.acuite_visuelle || '').trim() || null,
+          statut_refractif: row.statut_refractif || 'Emmetrope',
+        };
+
+        const res = await fetch('http://localhost:8000/api/bilans-simples', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          success++;
+        } else {
+          failed++;
+          const err = await res.json().catch(() => ({}));
+          errors.push(`Ligne ${success + failed}: ${err.detail || 'erreur serveur'}`);
+        }
+      } catch (err) {
+        failed++;
+        errors.push(`Ligne ${success + failed}: ${err.message}`);
+      }
+    }
+
+    setResult({ success, failed, errors });
+    setImporting(false);
+  }, [parsed]);
+
   const handleReset = () => {
     setFile(null);
     setParsed(null);
@@ -270,15 +353,28 @@ export default function ImportCSV() {
   const warningCount = validations.filter((v) => v.level === 'warning').length;
 
   const handleDownloadTemplate = () => {
-    const csv = EXPECTED_COLUMNS.join(';') + '\n';
+    const cols = importMode === 'simple' ? EXPECTED_COLUMNS_SIMPLE : EXPECTED_COLUMNS;
+    const csv = cols.join(';') + '\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'bbadata_template.csv';
+    a.download = importMode === 'simple' ? 'bilans_simples_template.csv' : 'bbadata_template.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const handleSwitchMode = (mode) => {
+    setImportMode(mode);
+    setFile(null);
+    setParsed(null);
+    setValidations([]);
+    setResult(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const activeColumns = importMode === 'simple' ? EXPECTED_COLUMNS_SIMPLE : EXPECTED_COLUMNS;
+  const activeRequired = importMode === 'simple' ? REQUIRED_COLUMNS_SIMPLE : REQUIRED_COLUMNS;
 
   return (
     <div className="space-y-6">
@@ -289,12 +385,40 @@ export default function ImportCSV() {
             Import CSV
           </h1>
           <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
-            Module de transfert – Passerelle CSV entre la collecte web et l'analyse statistique
+            {importMode === 'simple'
+              ? 'Import de bilans simplifiés – Dépistage rapide (âge, amétropie, anomalies...)'
+              : 'Module de transfert – Passerelle CSV entre la collecte web et l\'analyse statistique'}
           </p>
         </div>
         <Button variant="secondary" icon={Download} size="sm" onClick={handleDownloadTemplate}>
           Télécharger template
         </Button>
+      </div>
+
+      {/* ─── Mode Tabs ────────────────────────────────────── */}
+      <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-fit">
+        <button
+          type="button"
+          onClick={() => handleSwitchMode('complet')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+            importMode === 'complet'
+              ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+          }`}
+        >
+          Bilan Optométrique
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSwitchMode('simple')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+            importMode === 'simple'
+              ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+          }`}
+        >
+          Bilan Simplifié
+        </button>
       </div>
 
       {/* ─── Upload Zone ──────────────────────────────────── */}
@@ -329,13 +453,13 @@ export default function ImportCSV() {
       {parsed && (
         <Card
           title="Validation des données"
-          description={`${parsed.rows.length} lignes détectées – ${EXPECTED_COLUMNS.length} colonnes attendues`}
+          description={`${parsed.rows.length} lignes détectées – ${activeColumns.length} colonnes attendues`}
           icon={Eye}
         >
           <div className="mt-3 space-y-3">
             {/* Column mapping status */}
             <div className="flex flex-wrap gap-2">
-              {EXPECTED_COLUMNS.slice(0, 15).map((col) => {
+              {activeColumns.slice(0, 15).map((col) => {
                 const found = parsed.headers.includes(col);
                 return (
                   <span
@@ -351,9 +475,9 @@ export default function ImportCSV() {
                   </span>
                 );
               })}
-              {EXPECTED_COLUMNS.length > 15 && (
+              {activeColumns.length > 15 && (
                 <span className="text-xs text-neutral-400 dark:text-neutral-500 self-center">
-                  +{EXPECTED_COLUMNS.length - 15} autres colonnes...
+                  +{activeColumns.length - 15} autres colonnes...
                 </span>
               )}
             </div>
@@ -481,11 +605,11 @@ export default function ImportCSV() {
           <Button
             variant="primary"
             icon={Upload}
-            onClick={handleImport}
+            onClick={importMode === 'simple' ? handleImportSimple : handleImport}
             isLoading={importing}
             disabled={!parsed.rows.length || errorCount > 0}
           >
-            Importer {parsed.rows.length} bilans
+            Importer {parsed.rows.length} {importMode === 'simple' ? 'bilans simplifiés' : 'bilans'}
           </Button>
           <Button variant="ghost" icon={Trash2} onClick={handleReset}>
             Réinitialiser
@@ -498,10 +622,27 @@ export default function ImportCSV() {
         <div className="mt-2 space-y-2 text-xs text-neutral-500 dark:text-neutral-400">
           <p><strong>Séparateur :</strong> point-virgule (;) ou virgule (,) – détection automatique</p>
           <p><strong>Encodage :</strong> UTF-8</p>
-          <p><strong>Colonnes requises :</strong> {REQUIRED_COLUMNS.join(', ')}</p>
-          <p><strong>Colonnes optionnelles :</strong> {EXPECTED_COLUMNS.filter(c => !REQUIRED_COLUMNS.includes(c)).slice(0, 10).join(', ')}...</p>
-          <p><strong>Anonymisation :</strong> Conformément à la Déclaration d'Helsinki, les données nominatives ne sont utilisées que pour le suivi clinique. L'export statistique anonymise toutes les informations.</p>
-          <p><strong>Calculs automatiques :</strong> Équivalent sphérique (ES = SPH + CYL/2), classification des amétropies (ISO 13666:2019), alertes PIO (&gt; 21 mmHg, AAO PPP).</p>
+          <p><strong>Colonnes requises :</strong> {activeRequired.join(', ')}</p>
+          {importMode === 'simple' ? (
+            <>
+              <p><strong>Colonnes :</strong> {EXPECTED_COLUMNS_SIMPLE.join(', ')}</p>
+              <p><strong>Amétropies valides :</strong> {VALID_AMETROPIES.join(', ')} (séparées par virgule si multiples)</p>
+              <p><strong>Anomalies valides :</strong> {VALID_ANOMALIES.join(', ')} (séparées par virgule si multiples)</p>
+              <p><strong>Statut réfractif :</strong> Emmetrope, Non emmetrope</p>
+              <p><strong>Sexe :</strong> Homme, Femme</p>
+              <div className="mt-2 p-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg font-mono text-[11px]">
+                <p className="text-neutral-600 dark:text-neutral-300 mb-1">Exemple :</p>
+                <p>"age";"sexe";"ametropie";"anomalies";"acuite_visuelle";"statut_refractif"</p>
+                <p>25;"Homme";"Myopie";"Strabisme, Ptosis";"10/10";"Emmetrope"</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <p><strong>Colonnes optionnelles :</strong> {EXPECTED_COLUMNS.filter(c => !REQUIRED_COLUMNS.includes(c)).slice(0, 10).join(', ')}...</p>
+              <p><strong>Anonymisation :</strong> Conformément à la Déclaration d'Helsinki, les données nominatives ne sont utilisées que pour le suivi clinique. L'export statistique anonymise toutes les informations.</p>
+              <p><strong>Calculs automatiques :</strong> Équivalent sphérique (ES = SPH + CYL/2), classification des amétropies (ISO 13666:2019), alertes PIO (&gt; 21 mmHg, AAO PPP).</p>
+            </>
+          )}
         </div>
       </Card>
     </div>

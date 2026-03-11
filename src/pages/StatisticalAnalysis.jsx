@@ -31,6 +31,7 @@ import {
   Crosshair,
   Gauge,
   Glasses,
+  ClipboardList,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -95,8 +96,11 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }) {
   const [bilans, setBilans] = useState([]);
+  const [bilansSimples, setBilansSimples] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState('complet'); // 'complet' | 'simple'
   const [filter, setFilter] = useState({ sexe: 'all', tranche: 'all' });
+  const [filterSimple, setFilterSimple] = useState({ sexe: 'all', tranche: 'all' });
   const [expandedCard, setExpandedCard] = useState(null);
   const modalRef = useRef(null);
 
@@ -130,10 +134,17 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/bilans?limit=1000');
+      const [res, resSimple] = await Promise.all([
+        fetch('http://localhost:8000/api/bilans?limit=1000'),
+        fetch('http://localhost:8000/api/bilans-simples?limit=1000'),
+      ]);
       if (res.ok) {
         const data = await res.json();
         setBilans(data);
+      }
+      if (resSimple.ok) {
+        const data = await resSimple.json();
+        setBilansSimples(data);
       }
     } catch { /* backend offline */ }
     setLoading(false);
@@ -327,6 +338,110 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
   }
   const axeData = Object.entries(axeBuckets).map(([subject, count]) => ({ subject, count }));
 
+  // ═══════════════════════════════════════════════════════════
+  // BILANS SIMPLIFIÉS – Computed statistics
+  // ═══════════════════════════════════════════════════════════
+
+  function getTrancheFromAge(age) {
+    if (age == null) return 'Inconnu';
+    if (age < 10) return '0-9 ans';
+    if (age < 20) return '10-19 ans';
+    if (age < 30) return '20-29 ans';
+    if (age < 40) return '30-39 ans';
+    if (age < 50) return '40-49 ans';
+    if (age < 60) return '50-59 ans';
+    return '60+ ans';
+  }
+
+  const filteredSimple = bilansSimples.filter((b) => {
+    if (filterSimple.sexe !== 'all' && b.sexe !== filterSimple.sexe) return false;
+    if (filterSimple.tranche !== 'all' && getTrancheFromAge(b.age) !== filterSimple.tranche) return false;
+    return true;
+  });
+
+  const totalSimple = filteredSimple.length;
+
+  // Amétropie distribution (multi-values comma separated)
+  const sAmetropieMap = {};
+  for (const b of filteredSimple) {
+    if (b.ametropie) {
+      for (const a of b.ametropie.split(',')) {
+        const v = a.trim();
+        if (v) sAmetropieMap[v] = (sAmetropieMap[v] || 0) + 1;
+      }
+    }
+  }
+  const sAmetropieData = Object.entries(sAmetropieMap)
+    .map(([name, value]) => ({ name, value, pct: totalSimple ? ((value / totalSimple) * 100).toFixed(1) : 0 }))
+    .sort((a, b) => b.value - a.value);
+
+  // Anomalies distribution
+  const sAnomaliesMap = {};
+  for (const b of filteredSimple) {
+    if (b.anomalies) {
+      for (const a of b.anomalies.split(',')) {
+        const v = a.trim();
+        if (v && v !== 'Aucune') sAnomaliesMap[v] = (sAnomaliesMap[v] || 0) + 1;
+      }
+    }
+  }
+  const sAnomaliesData = Object.entries(sAnomaliesMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  // Acuité visuelle distribution
+  const sAcuiteMap = {};
+  for (const b of filteredSimple) {
+    if (b.acuite_visuelle) {
+      sAcuiteMap[b.acuite_visuelle] = (sAcuiteMap[b.acuite_visuelle] || 0) + 1;
+    }
+  }
+  const acuiteOrder = ['PL-', 'PL+', 'VBLM', 'CLD', '<1/10', '1/10', '2/10', '3/10', '4/10', '5/10', '6/10', '7/10', '8/10', '9/10', '10/10'];
+  const sAcuiteData = Object.entries(sAcuiteMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => acuiteOrder.indexOf(a.name) - acuiteOrder.indexOf(b.name));
+
+  // Statut réfractif
+  const sStatutMap = {};
+  for (const b of filteredSimple) {
+    if (b.statut_refractif) {
+      sStatutMap[b.statut_refractif] = (sStatutMap[b.statut_refractif] || 0) + 1;
+    }
+  }
+  const sStatutData = Object.entries(sStatutMap).map(([name, value]) => ({ name, value }));
+
+  // Sexe distribution
+  const sSexeMap = {};
+  for (const b of filteredSimple) {
+    const s = b.sexe || 'Inconnu';
+    sSexeMap[s] = (sSexeMap[s] || 0) + 1;
+  }
+  const sSexeData = Object.entries(sSexeMap).map(([name, value]) => ({ name, value }));
+
+  // Demographics by age
+  const sDemoMap = {};
+  for (const b of filteredSimple) {
+    const t = getTrancheFromAge(b.age);
+    sDemoMap[t] = (sDemoMap[t] || 0) + 1;
+  }
+  const sDemoData = Object.entries(sDemoMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => {
+      const order = ['0-9 ans', '10-19 ans', '20-29 ans', '30-39 ans', '40-49 ans', '50-59 ans', '60+ ans', 'Inconnu'];
+      return order.indexOf(a.name) - order.indexOf(b.name);
+    });
+
+  // KPIs for simplified
+  const sNonEmmetrope = sStatutMap['Non emmetrope'] || 0;
+  const sAnomaliesCount = Object.values(sAnomaliesMap).reduce((a, b) => a + b, 0);
+  const sAucuneAnomalie = filteredSimple.filter(b => !b.anomalies || b.anomalies.includes('Aucune')).length;
+
+  // Available tranches for simple filter
+  const availableTranchesSimple = [...new Set(bilansSimples.map((b) => getTrancheFromAge(b.age)))].sort((a, b) => {
+    const order = ['0-9 ans', '10-19 ans', '20-29 ans', '30-39 ans', '40-49 ans', '50-59 ans', '60+ ans', 'Inconnu'];
+    return order.indexOf(a) - order.indexOf(b);
+  });
+
   // Available tranches for filter
   const availableTranches = [...new Set(bilans.map((b) => getTrancheAge(b.date_naissance)))].sort();
 
@@ -399,6 +514,37 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
         </div>
       </div>
 
+      {/* ─── Section Tabs ─────────────────────────────────── */}
+      <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl w-fit">
+        <button
+          onClick={() => setSection('complet')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            section === 'complet'
+              ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+          }`}
+        >
+          <Eye size={15} />
+          Bilans Optométriques
+        </button>
+        <button
+          onClick={() => setSection('simple')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            section === 'simple'
+              ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+          }`}
+        >
+          <ClipboardList size={15} />
+          Bilans Simplifiés
+        </button>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* SECTION: BILANS OPTOMÉTRIQUES                         */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {section === 'complet' && (<>
+
       {/* ─── Filters ──────────────────────────────────────── */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
@@ -447,7 +593,7 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
       </div>
 
       {/* ─── Expanded Card Modal ─────────────────────────── */}
-      {expandedCard && createPortal(
+      {expandedCard && !expandedCard.startsWith('s-') && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
           onClick={() => setExpandedCard(null)}
@@ -1050,6 +1196,338 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
         </div>
       </Card>
       </div>
+
+      </>)}
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* SECTION: BILANS SIMPLIFIÉS                            */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {section === 'simple' && (<>
+
+      {/* ─── Filters Simplifiés ───────────────────────────── */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Filter size={14} className="text-emerald-500" />
+          <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Filtres :</span>
+        </div>
+        <select
+          value={filterSimple.sexe}
+          onChange={(e) => setFilterSimple((f) => ({ ...f, sexe: e.target.value }))}
+          className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
+        >
+          <option value="all">Tous sexes</option>
+          <option value="Homme">Homme</option>
+          <option value="Femme">Femme</option>
+        </select>
+        <select
+          value={filterSimple.tranche}
+          onChange={(e) => setFilterSimple((f) => ({ ...f, tranche: e.target.value }))}
+          className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
+        >
+          <option value="all">Toutes tranches d'âge</option>
+          {availableTranchesSimple.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <span className="text-xs text-neutral-400 dark:text-neutral-500">
+          {totalSimple} bilans simplifiés
+        </span>
+      </div>
+
+      {/* ─── KPI Cards Simplifiés ─────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {[
+          { label: 'Total bilans', value: totalSimple, color: 'text-emerald-600 dark:text-emerald-400' },
+          { label: 'Non emmétrope', value: `${totalSimple ? ((sNonEmmetrope / totalSimple) * 100).toFixed(0) : 0}%`, color: 'text-orange-600 dark:text-orange-400' },
+          { label: 'Anomalies détectées', value: sAnomaliesCount, color: 'text-red-600 dark:text-red-400' },
+          { label: 'Sans anomalie', value: sAucuneAnomalie, color: 'text-green-600 dark:text-green-400' },
+          { label: 'Amétropies', value: Object.keys(sAmetropieMap).length, color: 'text-blue-600 dark:text-blue-400' },
+        ].map((kpi) => (
+          <div key={kpi.label} className="bg-white dark:bg-neutral-800 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40 p-4 text-center">
+            <p className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">{kpi.label}</p>
+            <p className={`text-xl font-bold mt-1 ${kpi.color}`}>{kpi.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── Expanded Card Modal (simplifiés) ────────────── */}
+      {expandedCard && expandedCard.startsWith('s-') && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+          onClick={() => setExpandedCard(null)}
+        >
+          <div
+            className="relative bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-[90vw] max-w-5xl max-h-[90vh] overflow-y-auto p-8 animate-[scaleIn_0.25s_ease-out]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setExpandedCard(null)}
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="mb-6">
+              <h2 className="text-lg font-bold text-neutral-800 dark:text-neutral-100">
+                {expandedCard === 's-ametropie' && 'Répartition des amétropies'}
+                {expandedCard === 's-anomalies' && 'Répartition des anomalies'}
+                {expandedCard === 's-acuite' && 'Distribution de l\'acuité visuelle'}
+                {expandedCard === 's-statut' && 'Statut réfractif'}
+                {expandedCard === 's-sexe' && 'Répartition par sexe'}
+                {expandedCard === 's-demo' && 'Segmentation par tranche d\'âge'}
+              </h2>
+              <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
+                {expandedCard === 's-ametropie' && 'Classification OMS – Bulletin de la santé visuelle mondiale'}
+                {expandedCard === 's-anomalies' && 'Classification ICD-11 (CIM-11) · AAO Preferred Practice Patterns'}
+                {expandedCard === 's-acuite' && 'Échelle décimale ISO 8596 · Seuils OMS ICD-11 9D90'}
+                {expandedCard === 's-statut' && 'Définition de l\'emmétropie selon ISO 13666:2019'}
+                {expandedCard === 's-sexe' && 'Stratification STROBE · Déclaration d\'Helsinki'}
+                {expandedCard === 's-demo' && 'Recommandations AAO PPP · OMS VISION 2020'}
+              </p>
+            </div>
+
+            {expandedCard === 's-ametropie' && (
+              <>
+                <ResponsiveContainer width="100%" height={480}>
+                  <BarChart data={sAmetropieData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                    <XAxis type="number" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                    <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" name="Cas" radius={[0, 6, 6, 0]}>
+                      {sAmetropieData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {sAmetropieData.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm bg-neutral-50 dark:bg-neutral-700/50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                        <span className="text-neutral-600 dark:text-neutral-300">{p.name}</span>
+                      </div>
+                      <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-200">{p.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {expandedCard === 's-anomalies' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <RadarChart data={sAnomaliesData} cx="50%" cy="50%" outerRadius="65%">
+                  <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <PolarRadiusAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Radar name="Cas" dataKey="value" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} strokeWidth={2} />
+                  <Tooltip content={<CustomTooltip />} />
+                </RadarChart>
+              </ResponsiveContainer>
+            )}
+
+            {expandedCard === 's-acuite' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={sAcuiteData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Patients" fill="#10b981" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {expandedCard === 's-statut' && (
+              <div className="flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={480}>
+                  <PieChart>
+                    <Pie data={sStatutData} cx="50%" cy="50%" innerRadius={80} outerRadius={160} paddingAngle={3} dataKey="value"
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      className="dark:[&_text]:fill-neutral-400"
+                    >
+                      <Cell fill="#10b981" />
+                      <Cell fill="#f59e0b" />
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {expandedCard === 's-sexe' && (
+              <div className="flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={480}>
+                  <PieChart>
+                    <Pie data={sSexeData} cx="50%" cy="50%" innerRadius={80} outerRadius={160} paddingAngle={3} dataKey="value"
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      className="dark:[&_text]:fill-neutral-400"
+                    >
+                      {sSexeData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {expandedCard === 's-demo' && (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={sDemoData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Patients" fill="#10b981" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ─── Charts Row S1: Amétropies + Anomalies ────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('s-ametropie')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Répartition des amétropies" description="Types d'amétropie détectés lors du dépistage" icon={Eye}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={sAmetropieData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Cas" radius={[0, 4, 4, 0]}>
+                    {sAmetropieData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('s-anomalies')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Répartition des anomalies" description="Anomalies visuelles détectées lors du dépistage" icon={AlertTriangle}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <RadarChart data={sAnomaliesData} cx="50%" cy="50%" outerRadius="65%">
+                  <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <PolarRadiusAxis tick={{ fontSize: 8, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Radar name="Cas" dataKey="value" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} strokeWidth={2} />
+                  <Tooltip content={<CustomTooltip />} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* ─── Charts Row S2: Acuité visuelle + Statut réfractif */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('s-acuite')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Distribution de l'acuité visuelle" description="Répartition des niveaux d'acuité – Dépistage" icon={Crosshair}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={sAcuiteData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Patients" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('s-statut')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Statut réfractif" description="Proportion emmétrope vs non emmétrope" icon={Gauge}>
+            <div className="mt-3 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={sStatutData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="value"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                    className="dark:[&_text]:fill-neutral-400"
+                  >
+                    <Cell fill="#10b981" />
+                    <Cell fill="#f59e0b" />
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* ─── Charts Row S3: Sexe + Démographie ────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('s-sexe')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Répartition par sexe" description="Distribution Homme / Femme – Dépistage" icon={Users}>
+            <div className="mt-3 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={sSexeData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="value"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                    className="dark:[&_text]:fill-neutral-400"
+                  >
+                    {sSexeData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+
+        <div className="cursor-pointer group relative" onClick={() => setExpandedCard('s-demo')}>
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+            <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+          </div>
+          <Card title="Segmentation par tranche d'âge" description="Répartition démographique – Dépistage" icon={BarChart3}>
+            <div className="mt-3 -mx-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={sDemoData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Patients" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      </>)}
 
       {/* ─── Footer ───────────────────────────────────────── */}
       <div className="text-center py-4 border-t border-neutral-200 dark:border-neutral-700">

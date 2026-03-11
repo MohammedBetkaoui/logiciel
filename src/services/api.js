@@ -83,6 +83,26 @@ export async function getBilan(examenId) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// BILANS SIMPLES (dépistage rapide)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getBilansSimples() {
+  return apiCall('/api/bilans-simples');
+}
+
+export async function createBilanSimple(data) {
+  return apiCall('/api/bilans-simples', { method: 'POST', body: data });
+}
+
+export async function deleteBilanSimple(id) {
+  return apiCall(`/api/bilans-simples/${id}`, { method: 'DELETE' });
+}
+
+export async function getBilansSimplesStats() {
+  return apiCall('/api/bilans-simples/stats');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 

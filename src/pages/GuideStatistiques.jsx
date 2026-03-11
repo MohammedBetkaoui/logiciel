@@ -31,6 +31,7 @@ import {
   BarChart2,
   X,
   RefreshCw,
+  ClipboardList,
 } from 'lucide-react';
 import ClinicalAlerts from '../components/medical/ClinicalAlerts';
 import {
@@ -317,6 +318,91 @@ const STAT_CARDS = [
     interpretation: 'Alertes rouges = priorité. Alertes oranges = suivi rapproché.',
     utilite: 'Garantit qu\'aucun patient à risque ne passe entre les mailles du filet.',
   },
+  // ═══ Bilans Simplifiés ══════════════════════════
+  {
+    id: 's-ametropie',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Répartition des amétropies (simplifiés)',
+    icon: Eye,
+    color: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+    badgeColor: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300',
+    chartType: 'Barres horizontales',
+    norme: 'OMS – Bulletin de la santé visuelle mondiale',
+    description: 'Distribution des types d\'amétropie (Myopie, Hypermétropie, Astigmatisme, Presbytie, Anisométropie) détectés lors des dépistages rapides. Un patient peut présenter plusieurs amétropies. Classification selon les recommandations OMS sur les erreurs de réfraction non corrigées.',
+    interpretation: 'Indique les amétropies prédominantes. Selon l\'OMS, les erreurs de réfraction non corrigées sont la 1re cause de déficience visuelle mondiale. Une forte prévalence de myopie chez les jeunes peut orienter les campagnes de prévention.',
+    utilite: 'Identifie les tendances d\'amétropie dans la population dépistée pour adapter les ressources et répondre aux objectifs VISION 2020 / LANCE de l\'OMS.',
+  },
+  {
+    id: 's-anomalies',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Répartition des anomalies (simplifiés)',
+    icon: AlertTriangle,
+    color: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+    badgeColor: 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300',
+    chartType: 'Radar',
+    norme: 'ICD-11 (CIM-11) · AAO PPP',
+    description: 'Graphique radar des anomalies visuelles détectées : Strabisme, Amblyopie, Nystagmus, Daltonisme, Ptosis, Cataracte, Glaucome, Kératocône. Classification conforme à la CIM-11 (Classification Internationale des Maladies, OMS).',
+    interpretation: 'Un radar déséquilibré révèle les anomalies dominantes. Selon l\'AAO Preferred Practice Patterns, le strabisme et l\'amblyopie requièrent un dépistage précoce chez l\'enfant. Le glaucome et la cataracte nécessitent un suivi ophtalmologique.',
+    utilite: 'Vue d\'ensemble des pathologies détectées pour prioriser les références ophtalmologiques selon les critères AAO PPP.',
+  },
+  {
+    id: 's-acuite',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Distribution de l\'acuité visuelle (simplifiés)',
+    icon: Crosshair,
+    color: 'bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
+    badgeColor: 'bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300',
+    chartType: 'Barres verticales',
+    norme: 'ISO 8596 · OMS ICD-11 9D90',
+    description: 'Histogramme des niveaux d\'acuité visuelle (de PL- à 10/10) selon l\'échelle décimale ISO 8596. Inclut les notations basse vision : PL-, PL+, VBLM, CLD, <1/10. Seuils OMS : déficience visuelle légère (< 6/12), modérée (< 6/18), sévère (< 6/60), cécité (< 3/60 ou PL-).',
+    interpretation: 'Selon la classification OMS ICD-11 9D90 : AV < 3/10 = déficience visuelle modérée, AV < 1/10 = déficience sévère. Une concentration vers les valeurs basses indique un besoin élevé de correction optique.',
+    utilite: 'Évalue le niveau de vision selon les seuils OMS et identifie les cas de malvoyance nécessitant une prise en charge.',
+  },
+  {
+    id: 's-statut',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Statut réfractif (simplifiés)',
+    icon: Gauge,
+    color: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400',
+    badgeColor: 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300',
+    chartType: 'Camembert (Pie)',
+    norme: 'ISO 13666:2019',
+    description: 'Proportion de patients emmétropes (vision normale sans correction, ES ≈ 0 D) vs non emmétropes (nécessitant une correction optique). Classification selon ISO 13666:2019 pour la définition de l\'emmétropie.',
+    interpretation: 'Selon l\'OMS, 2.7 milliards de personnes ont besoin d\'une correction optique. Un taux élevé de « Non emmétrope » dans votre cohorte indique un besoin important de correction.',
+    utilite: 'Indicateur clé pour mesurer le taux d\'erreurs réfractives non corrigées et planifier les corrections optiques.',
+  },
+  {
+    id: 's-sexe',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Répartition par sexe (simplifiés)',
+    icon: Users,
+    color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+    badgeColor: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
+    chartType: 'Camembert (Pie)',
+    norme: 'Déclaration d\'Helsinki · STROBE',
+    description: 'Distribution des patients dépistés selon le sexe (Homme / Femme). Stratification requise par les lignes directrices STROBE (STrengthening the Reporting of OBservational Studies in Epidemiology).',
+    interpretation: 'Un déséquilibre de sexe peut révéler des biais dans l\'accès au dépistage. Selon l\'OMS, les femmes représentent 55% des personnes atteintes de déficience visuelle.',
+    utilite: 'Contexte démographique essentiel pour la validité statistique et la conformité aux normes de publication épidémiologique (STROBE).',
+  },
+  {
+    id: 's-demo',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Segmentation par tranche d\'âge (simplifiés)',
+    icon: BarChart3,
+    color: 'bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400',
+    badgeColor: 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300',
+    chartType: 'Barres verticales',
+    norme: 'OMS VISION 2020 · AAO PPP',
+    description: 'Répartition des patients dépistés par tranche d\'âge (0-9, 10-19, 20-29, 30-39, 40-49, 50-59, 60+ ans). Tranches alignées sur les recommandations AAO pour le dépistage par âge.',
+    interpretation: 'L\'AAO recommande un dépistage systématique chez l\'enfant (3-5 ans), puis à 40 ans minimum. L\'OMS via VISION 2020 cible les populations à risque par tranche d\'âge.',
+    utilite: 'Planification des campagnes de dépistage ciblées selon les priorités AAO PPP et les objectifs OMS VISION 2020.',
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -333,6 +419,10 @@ export default function GuideStatistiques() {
   const [bilans, setBilans] = useState([]);
   const [loadingBilans, setLoadingBilans] = useState(true);
 
+  // ─── Data: bilans simplifiés ───────────────────────────
+  const [bilansSimples, setBilansSimples] = useState([]);
+  const [loadingSimples, setLoadingSimples] = useState(true);
+
   // ─── Data: epidemiological dashboard ───────────────────
   const [anomalies, setAnomalies] = useState([]);
   const [pioData, setPioData] = useState([]);
@@ -348,6 +438,15 @@ export default function GuideStatistiques() {
     setLoadingBilans(false);
   }, []);
 
+  const loadBilansSimples = useCallback(async () => {
+    setLoadingSimples(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/bilans-simples?limit=1000');
+      if (res.ok) setBilansSimples(await res.json());
+    } catch { /* backend offline */ }
+    setLoadingSimples(false);
+  }, []);
+
   const loadEpiData = useCallback(async () => {
     try {
       const [a, p, d, al] = await Promise.all([
@@ -357,7 +456,7 @@ export default function GuideStatistiques() {
     } catch { /* backend offline */ }
   }, []);
 
-  useEffect(() => { loadBilans(); loadEpiData(); }, [loadBilans, loadEpiData]);
+  useEffect(() => { loadBilans(); loadBilansSimples(); loadEpiData(); }, [loadBilans, loadBilansSimples, loadEpiData]);
 
   // ─── Computed statistics from bilans ───────────────────
   const totalBilans = bilans.length;
@@ -492,6 +591,80 @@ export default function GuideStatistiques() {
 
   const pieData = epiDemographics.map((d) => ({ name: d.tranche || d.name, value: d.count || d.value }));
 
+  // ═══ Bilans Simplifiés – Computed statistics ═══════════
+  function getTrancheFromAge(age) {
+    if (age == null) return 'Inconnu';
+    if (age < 10) return '0-9 ans';
+    if (age < 20) return '10-19 ans';
+    if (age < 30) return '20-29 ans';
+    if (age < 40) return '30-39 ans';
+    if (age < 50) return '40-49 ans';
+    if (age < 60) return '50-59 ans';
+    return '60+ ans';
+  }
+
+  const totalSimple = bilansSimples.length;
+
+  const sAmetropieMap = {};
+  for (const b of bilansSimples) {
+    if (b.ametropie) {
+      for (const a of b.ametropie.split(',')) {
+        const v = a.trim();
+        if (v) sAmetropieMap[v] = (sAmetropieMap[v] || 0) + 1;
+      }
+    }
+  }
+  const sAmetropieData = Object.entries(sAmetropieMap)
+    .map(([name, value]) => ({ name, value, pct: totalSimple ? ((value / totalSimple) * 100).toFixed(1) : 0 }))
+    .sort((a, b) => b.value - a.value);
+
+  const sAnomaliesMap = {};
+  for (const b of bilansSimples) {
+    if (b.anomalies) {
+      for (const a of b.anomalies.split(',')) {
+        const v = a.trim();
+        if (v && v !== 'Aucune') sAnomaliesMap[v] = (sAnomaliesMap[v] || 0) + 1;
+      }
+    }
+  }
+  const sAnomaliesData = Object.entries(sAnomaliesMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  const sAcuiteMap = {};
+  for (const b of bilansSimples) {
+    if (b.acuite_visuelle) sAcuiteMap[b.acuite_visuelle] = (sAcuiteMap[b.acuite_visuelle] || 0) + 1;
+  }
+  const acuiteOrder = ['PL-', 'PL+', 'VBLM', 'CLD', '<1/10', '1/10', '2/10', '3/10', '4/10', '5/10', '6/10', '7/10', '8/10', '9/10', '10/10'];
+  const sAcuiteData = Object.entries(sAcuiteMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => acuiteOrder.indexOf(a.name) - acuiteOrder.indexOf(b.name));
+
+  const sStatutMap = {};
+  for (const b of bilansSimples) {
+    if (b.statut_refractif) sStatutMap[b.statut_refractif] = (sStatutMap[b.statut_refractif] || 0) + 1;
+  }
+  const sStatutData = Object.entries(sStatutMap).map(([name, value]) => ({ name, value }));
+
+  const sSexeMap = {};
+  for (const b of bilansSimples) {
+    const s = b.sexe || 'Inconnu';
+    sSexeMap[s] = (sSexeMap[s] || 0) + 1;
+  }
+  const sSexeData = Object.entries(sSexeMap).map(([name, value]) => ({ name, value }));
+
+  const sDemoMap = {};
+  for (const b of bilansSimples) {
+    const t = getTrancheFromAge(b.age);
+    sDemoMap[t] = (sDemoMap[t] || 0) + 1;
+  }
+  const sDemoData = Object.entries(sDemoMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => {
+      const order = ['0-9 ans', '10-19 ans', '20-29 ans', '30-39 ans', '40-49 ans', '50-59 ans', '60+ ans', 'Inconnu'];
+      return order.indexOf(a.name) - order.indexOf(b.name);
+    });
+
   // ─── Filter guide cards ────────────────────────────────
   const filtered = STAT_CARDS.filter((s) => {
     if (filterPage !== 'all' && s.page !== filterPage) return false;
@@ -511,6 +684,7 @@ export default function GuideStatistiques() {
     { id: 'all', label: 'Tout' },
     { id: 'statistical-analysis', label: 'Analyse statistique' },
     { id: 'medical-dashboard', label: 'Dashboard épidémiologique' },
+    { id: 'bilans-simplifies', label: 'Bilans simplifiés' },
   ];
 
   const toggleChart = (id) => {
@@ -520,8 +694,27 @@ export default function GuideStatistiques() {
   // ─── Render chart by ID ────────────────────────────────
   const renderChart = (id) => {
     const isEpiChart = ['anomalies', 'pio', 'epi-demographics', 'alerts'].includes(id);
+    const isSimpleChart = id.startsWith('s-');
 
-    if (!isEpiChart && loadingBilans) {
+    if (isSimpleChart && loadingSimples) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="animate-spin text-emerald-500" size={20} />
+          <span className="ml-2 text-sm text-neutral-500 dark:text-neutral-400">Chargement des bilans simplifiés...</span>
+        </div>
+      );
+    }
+
+    if (isSimpleChart && totalSimple === 0) {
+      return (
+        <div className="text-center py-8">
+          <BarChart2 size={28} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-2" />
+          <p className="text-sm text-neutral-400 dark:text-neutral-500">Aucune donnée de bilans simplifiés. Importez des bilans simplifiés pour voir ce graphique.</p>
+        </div>
+      );
+    }
+
+    if (!isEpiChart && !isSimpleChart && loadingBilans) {
       return (
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="animate-spin text-blue-500" size={20} />
@@ -530,7 +723,7 @@ export default function GuideStatistiques() {
       );
     }
 
-    if (!isEpiChart && totalBilans === 0) {
+    if (!isEpiChart && !isSimpleChart && totalBilans === 0) {
       return (
         <div className="text-center py-8">
           <BarChart2 size={28} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-2" />
@@ -841,6 +1034,118 @@ export default function GuideStatistiques() {
           <div className="max-h-80 overflow-y-auto">
             <ClinicalAlerts alerts={alertsData} />
           </div>
+        );
+
+      // ═══ Bilans Simplifiés Charts ═════════════════════
+      case 's-ametropie':
+        return (
+          <>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={sAmetropieData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar dataKey="value" name="Cas" radius={[0, 6, 6, 0]}>
+                  {sAmetropieData.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {sAmetropieData.map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-xs bg-neutral-100 dark:bg-neutral-700/50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                    <span className="text-neutral-600 dark:text-neutral-300">{p.name}</span>
+                  </div>
+                  <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-200">{p.pct}%</span>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+
+      case 's-anomalies':
+        return sAnomaliesData.length === 0 ? (
+          <div className="text-center py-8">
+            <BarChart2 size={28} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-2" />
+            <p className="text-sm text-neutral-400 dark:text-neutral-500">Aucune anomalie détectée.</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            <RadarChart data={sAnomaliesData} cx="50%" cy="50%" outerRadius="70%">
+              <PolarGrid stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700 dark:[&>circle]:stroke-neutral-700" />
+              <PolarAngleAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+              <PolarRadiusAxis tick={{ fontSize: 10, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+              <Radar name="Cas" dataKey="value" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.25} strokeWidth={2} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+            </RadarChart>
+          </ResponsiveContainer>
+        );
+
+      case 's-acuite':
+        return (
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={sAcuiteData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar dataKey="value" name="Patients" fill="#10b981" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+
+      case 's-statut':
+        return (
+          <div className="flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={350}>
+              <RechartsPie>
+                <Pie data={sStatutData} cx="50%" cy="50%" innerRadius={70} outerRadius={130} paddingAngle={3} dataKey="value"
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  className="dark:[&_text]:fill-neutral-400">
+                  <Cell fill="#10b981" />
+                  <Cell fill="#f59e0b" />
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </RechartsPie>
+            </ResponsiveContainer>
+          </div>
+        );
+
+      case 's-sexe':
+        return (
+          <div className="flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={350}>
+              <RechartsPie>
+                <Pie data={sSexeData} cx="50%" cy="50%" innerRadius={70} outerRadius={130} paddingAngle={3} dataKey="value"
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  className="dark:[&_text]:fill-neutral-400">
+                  {sSexeData.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </RechartsPie>
+            </ResponsiveContainer>
+          </div>
+        );
+
+      case 's-demo':
+        return (
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={sDemoData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar dataKey="value" name="Patients" fill="#10b981" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         );
 
       default:
