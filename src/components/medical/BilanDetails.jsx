@@ -563,6 +563,7 @@ export default function BilanDetails({ examenId, onBack }) {
   };
 
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingPro, setIsDownloadingPro] = useState(false);
 
   const handleDownloadPDF = async () => {
     if (!bilan) return;
@@ -600,6 +601,28 @@ export default function BilanDetails({ examenId, onBack }) {
       console.error('Erreur génération PDF:', err);
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadPDFPro = async () => {
+    if (!bilan) return;
+    setIsDownloadingPro(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/bilans/${bilan.examen_id}/pdf`);
+      if (!res.ok) throw new Error('Erreur serveur');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bilan_${bilan.examen_id}_${bilan.nom}_${bilan.prenom}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erreur génération PDF Pro:', err);
+    } finally {
+      setIsDownloadingPro(false);
     }
   };
 
@@ -643,6 +666,17 @@ export default function BilanDetails({ examenId, onBack }) {
               <><Loader2 size={15} className="animate-spin" /> Génération…</>
             ) : (
               <><Download size={15} /> Télécharger PDF</>
+            )}
+          </button>
+          <button
+            onClick={handleDownloadPDFPro}
+            disabled={isDownloadingPro}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-wait rounded-lg transition-all shadow-sm"
+          >
+            {isDownloadingPro ? (
+              <><Loader2 size={15} className="animate-spin" /> Génération…</>
+            ) : (
+              <><Download size={15} /> PDF Professionnel</>
             )}
           </button>
          

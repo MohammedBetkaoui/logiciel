@@ -11,7 +11,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from pydantic import BaseModel, Field
 
 from database import init_database, log_audit, compute_record_hash
@@ -26,6 +26,7 @@ from clinical_engine import (
 )
 from analytics_engine import analyser_bilan_complet, generer_statistiques_bilans
 from rgpd import exporter_csv_anonymise, verifier_consentement, droit_a_loubli
+from pdf_generator import generate_bilan_pdf_bytes
 
 # ─── Resolve base directory ─────────────────────────────────
 import sys as _sys
@@ -682,6 +683,116 @@ async def get_bilan(examen_id: int):
             "alertes": analyse.alertes,
         },
     }
+
+
+@app.get("/api/bilans/{examen_id}/pdf")
+async def export_bilan_pdf(examen_id: int):
+    """Génère et retourne le PDF du bilan optométrique."""
+    row = db_conn.execute(
+        """SELECT e.*, p.nom, p.prenom, p.date_naissance, p.sexe
+           FROM examens e
+           JOIN patients p ON e.patient_id = p.patient_id
+           WHERE e.examen_id = ?""",
+        (examen_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Bilan non trouvé")
+
+    b = dict(row)
+    log_audit(db_conn, "system", "EXPORT_PDF", "examens", examen_id)
+
+    urgence_map = {0: "ROUTINE", 1: "SURVEILLANCE", 2: "RÉFÉRÉ", 3: "URGENCE"}
+
+    def _fmt_sphere(v):
+        if v is None or str(v).strip() in ("", "None"):
+            return "—"
+        try:
+            n = float(v)
+            return f"{n:+.2f} D"
+        except (ValueError, TypeError):
+            return str(v)
+
+    def _fmt(v, suffix=""):
+        if v is None or str(v).strip() in ("", "None"):
+            return "—"
+        return f"{v}{suffix}"
+
+    pdf_data = {
+        "bilan_num": str(examen_id).zfill(4),
+        "date": b.get("date_examen", "—"),
+        "praticien": b.get("praticien", "—"),
+        "patient": {
+            "nom": f"{b.get('nom', '')} {b.get('prenom', '')}".strip() or "—",
+            "ddn": b.get("date_naissance", "—"),
+            "sexe": b.get("sexe", "—"),
+            "type": urgence_map.get(b.get("niveau_urgence", 0), "ROUTINE"),
+        },
+        "acuite_visuelle": {
+            "od_sc": _fmt(b.get("av_od_sc")),
+            "od_ac": _fmt(b.get("av_od_ac")),
+            "og_sc": _fmt(b.get("av_og_sc")),
+            "og_ac": _fmt(b.get("av_og_ac")),
+            "binoculaire": _fmt(b.get("av_binoculaire")),
+        },
+        "refraction_objective": {
+            "od": {
+                "sphere": _fmt_sphere(b.get("auto_od_sphere")),
+                "cylindre": _fmt_sphere(b.get("auto_od_cylindre")),
+                "axe": _fmt(b.get("auto_od_axe"), "°"),
+            },
+            "og": {
+                "sphere": _fmt_sphere(b.get("auto_og_sphere")),
+                "cylindre": _fmt_sphere(b.get("auto_og_cylindre")),
+                "axe": _fmt(b.get("auto_og_axe"), "°"),
+            },
+        },
+        "prescription": {
+            "od": {
+                "sphere": _fmt_sphere(b.get("rx_od_sphere")),
+                "cylindre": _fmt_sphere(b.get("rx_od_cylindre")),
+                "axe": _fmt(b.get("rx_od_axe"), "°"),
+                "addition": _fmt_sphere(b.get("rx_od_addition")),
+                "prisme": _fmt(b.get("rx_od_prisme")),
+                "base": _fmt(b.get("rx_od_base_prisme")),
+            },
+            "og": {
+                "sphere": _fmt_sphere(b.get("rx_og_sphere")),
+                "cylindre": _fmt_sphere(b.get("rx_og_cylindre")),
+                "axe": _fmt(b.get("rx_og_axe"), "°"),
+                "addition": _fmt_sphere(b.get("rx_og_addition")),
+                "prisme": _fmt(b.get("rx_og_prisme")),
+                "base": _fmt(b.get("rx_og_base_prisme")),
+            },
+        },
+        "distances_pression": {
+            "dp_od": _fmt(b.get("dp_od"), " mm"),
+            "dp_og": _fmt(b.get("dp_og"), " mm"),
+            "dp_bino": _fmt(b.get("dp_binoculaire"), " mm"),
+            "pio_od": _fmt(b.get("pio_od"), " mmHg"),
+            "pio_og": _fmt(b.get("pio_og"), " mmHg"),
+            "methode": _fmt(b.get("methode_pio")),
+        },
+        "examens": {
+            "motilite": b.get("motilite_oculaire"),
+            "cover_test": b.get("cover_test"),
+            "test_couleurs": b.get("test_couleurs"),
+            "fond_oeil": b.get("fond_oeil"),
+            "biomicroscopie": b.get("biomicroscopie"),
+            "champ_visuel": b.get("champ_visuel"),
+        },
+        "diagnostic": b.get("diagnostic"),
+        "observations": b.get("observations"),
+        "sha256": b.get("signature_hash", "N/A"),
+    }
+
+    pdf_bytes = generate_bilan_pdf_bytes(pdf_data)
+    filename = f"bilan_{examen_id}_{b.get('nom', '')}_{b.get('prenom', '')}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.delete("/api/bilans/{examen_id}")
