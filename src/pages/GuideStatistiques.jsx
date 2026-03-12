@@ -403,6 +403,77 @@ const STAT_CARDS = [
     interpretation: 'L\'AAO recommande un dépistage systématique chez l\'enfant (3-5 ans), puis à 40 ans minimum. L\'OMS via VISION 2020 cible les populations à risque par tranche d\'âge.',
     utilite: 'Planification des campagnes de dépistage ciblées selon les priorités AAO PPP et les objectifs OMS VISION 2020.',
   },
+  // ═══ Bilans Simplifiés – Statistiques basées sur les normes ══
+  {
+    id: 's-deficience',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Classification déficience visuelle (OMS)',
+    icon: Eye,
+    color: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+    badgeColor: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
+    chartType: 'Barres verticales',
+    norme: 'ISO 8596 · OMS ICD-11 9D90',
+    description: 'Classification des patients selon les seuils de déficience visuelle de l\'OMS (ICD-11 9D90). Basée sur la conversion de l\'acuité visuelle en valeur décimale : Normal (≥ 8/10), Déficience légère (< 8/10), Modérée (< 5/10), Sévère (< 3/10), Cécité légale (< 1/10), Cécité (< 0.5/10).',
+    interpretation: 'Permet d\'évaluer la répartition de la sévérité des problèmes visuels. Une concentration dans les catégories "Déficience modérée" à "Cécité" indique un besoin accru de prise en charge ophtalmologique.',
+    utilite: 'Outil de stratification clinique conforme aux seuils OMS pour prioriser les patients nécessitant une intervention urgente.',
+  },
+  {
+    id: 's-ametropie-sexe',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Amétropies par sexe',
+    icon: Users,
+    color: 'bg-lime-50 dark:bg-lime-900/30 text-lime-600 dark:text-lime-400',
+    badgeColor: 'bg-lime-100 dark:bg-lime-900/50 text-lime-700 dark:text-lime-300',
+    chartType: 'Barres empilées horizontales',
+    norme: 'STROBE · ISO 13666:2019',
+    description: 'Croisement des types d\'amétropie avec le sexe du patient. Stratification démographique conforme aux lignes directrices STROBE pour les études observationnelles. Terminologie des amétropies selon ISO 13666:2019.',
+    interpretation: 'Révèle les différences de prévalence des amétropies entre hommes et femmes. Selon l\'OMS, les femmes sont davantage touchées par les erreurs réfractives non corrigées.',
+    utilite: 'Analyse genrée des amétropies pour adapter les stratégies de dépistage et respecter les exigences de publication épidémiologique STROBE.',
+  },
+  {
+    id: 's-anomalies-age',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Anomalies par tranche d\'âge',
+    icon: AlertTriangle,
+    color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+    badgeColor: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
+    chartType: 'Barres empilées verticales',
+    norme: 'AAO PPP · ICD-11 (CIM-11)',
+    description: 'Distribution des anomalies visuelles par tranche d\'âge. Classification ICD-11 : strabisme (9A00), amblyopie (9A01), glaucome (9A61), cataracte (9B10). Tranches d\'âge conformes aux recommandations AAO Preferred Practice Patterns.',
+    interpretation: 'L\'AAO recommande un dépistage ciblé par âge : strabisme/amblyopie chez l\'enfant (3-5 ans), glaucome à partir de 40 ans. Un pic d\'anomalies dans une tranche spécifique oriente les priorités de dépistage.',
+    utilite: 'Identification des pathologies prédominantes par groupe d\'âge pour planifier les campagnes de dépistage selon les critères AAO PPP.',
+  },
+  {
+    id: 's-emmetropie-age',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Taux de non-emmétropie par tranche d\'âge',
+    icon: TrendingUp,
+    color: 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400',
+    badgeColor: 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300',
+    chartType: 'Barres verticales (%)',
+    norme: 'OMS VISION 2020 · ISO 13666:2019',
+    description: 'Pourcentage de patients non emmétropes par tranche d\'âge. Emmétrope = vision normale sans correction (ES ≈ 0 D, ISO 13666:2019). Indicateur clé de l\'initiative OMS VISION 2020 pour l\'élimination de la cécité évitable.',
+    interpretation: 'Un taux élevé de non-emmétropie dans les tranches jeunes peut signaler une épidémie de myopie. Selon l\'OMS, 2,7 milliards de personnes nécessitent une correction optique mondiale.',
+    utilite: 'Suivi de la prévalence des erreurs réfractives par âge, aligné sur les objectifs OMS VISION 2020 d\'accès universel à la correction optique.',
+  },
+  {
+    id: 's-anomalies-sexe',
+    page: 'bilans-simplifies',
+    pageName: 'Bilans simplifiés',
+    titre: 'Anomalies par sexe',
+    icon: Activity,
+    color: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+    badgeColor: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300',
+    chartType: 'Barres empilées horizontales',
+    norme: 'STROBE · ICD-11 (CIM-11)',
+    description: 'Croisement des anomalies visuelles détectées avec le sexe du patient. Stratification conforme aux lignes directrices STROBE. Classification des anomalies selon la CIM-11 (Classification Internationale des Maladies).',
+    interpretation: 'Identifie les différences de prévalence des anomalies entre hommes et femmes. Certaines pathologies comme le daltonisme (8% hommes vs 0.5% femmes) ont une forte composante génétique liée au sexe.',
+    utilite: 'Analyse genrée des pathologies pour une stratification épidémiologique rigoureuse conforme aux normes STROBE et à la Déclaration d\'Helsinki.',
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -663,6 +734,119 @@ export default function GuideStatistiques() {
     .sort((a, b) => {
       const order = ['0-9 ans', '10-19 ans', '20-29 ans', '30-39 ans', '40-49 ans', '50-59 ans', '60+ ans', 'Inconnu'];
       return order.indexOf(a.name) - order.indexOf(b.name);
+    });
+
+  // ═══ Bilans Simplifiés – Statistiques basées sur les normes ═══
+  function acuiteToDecimal(av) {
+    if (!av) return null;
+    const special = { 'PL-': 0, 'PL+': 0.01, 'VBLM': 0.02, 'CLD': 0.04, '<1/10': 0.05 };
+    if (special[av] !== undefined) return special[av];
+    const parts = av.split('/');
+    if (parts.length === 2) {
+      const num = parseFloat(parts[0]);
+      const den = parseFloat(parts[1]);
+      if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
+    }
+    return null;
+  }
+
+  function classifierDeficienceOMS(decAv) {
+    if (decAv === null) return 'Non classifié';
+    if (decAv >= 0.8) return 'Normal (≥ 8/10)';
+    if (decAv >= 0.5) return 'Déficience légère';
+    if (decAv >= 0.3) return 'Déficience modérée';
+    if (decAv >= 0.1) return 'Déficience sévère';
+    if (decAv >= 0.05) return 'Cécité légale';
+    return 'Cécité';
+  }
+
+  const sDeficienceMap = {};
+  for (const b of bilansSimples) {
+    const dec = acuiteToDecimal(b.acuite_visuelle);
+    const cat = classifierDeficienceOMS(dec);
+    sDeficienceMap[cat] = (sDeficienceMap[cat] || 0) + 1;
+  }
+  const deficienceOrder = ['Normal (≥ 8/10)', 'Déficience légère', 'Déficience modérée', 'Déficience sévère', 'Cécité légale', 'Cécité', 'Non classifié'];
+  const sDeficienceData = Object.entries(sDeficienceMap)
+    .map(([name, value]) => ({ name, value, pct: totalSimple ? ((value / totalSimple) * 100).toFixed(1) : 0 }))
+    .sort((a, b) => deficienceOrder.indexOf(a.name) - deficienceOrder.indexOf(b.name));
+  const deficienceColors = { 'Normal (≥ 8/10)': '#10b981', 'Déficience légère': '#f59e0b', 'Déficience modérée': '#f97316', 'Déficience sévère': '#ef4444', 'Cécité légale': '#dc2626', 'Cécité': '#991b1b', 'Non classifié': '#6b7280' };
+
+  const sAmetropieBySexe = {};
+  for (const b of bilansSimples) {
+    const s = b.sexe || 'Inconnu';
+    if (b.ametropie) {
+      for (const a of b.ametropie.split(',')) {
+        const v = a.trim();
+        if (v) {
+          if (!sAmetropieBySexe[v]) sAmetropieBySexe[v] = {};
+          sAmetropieBySexe[v][s] = (sAmetropieBySexe[v][s] || 0) + 1;
+        }
+      }
+    }
+  }
+  const allSexesSimple = [...new Set(bilansSimples.map(b => b.sexe || 'Inconnu'))];
+  const sAmetropieBySexeData = Object.entries(sAmetropieBySexe)
+    .map(([name, sexes]) => ({ name, ...sexes }))
+    .sort((a, b) => {
+      const totalA = allSexesSimple.reduce((s, k) => s + (a[k] || 0), 0);
+      const totalB = allSexesSimple.reduce((s, k) => s + (b[k] || 0), 0);
+      return totalB - totalA;
+    });
+
+  const sAnomaliesByAge = {};
+  for (const b of bilansSimples) {
+    const t = getTrancheFromAge(b.age);
+    if (b.anomalies) {
+      for (const a of b.anomalies.split(',')) {
+        const v = a.trim();
+        if (v && v !== 'Aucune') {
+          if (!sAnomaliesByAge[t]) sAnomaliesByAge[t] = {};
+          sAnomaliesByAge[t][v] = (sAnomaliesByAge[t][v] || 0) + 1;
+        }
+      }
+    }
+  }
+  const allAnomaliesNames = [...new Set(bilansSimples.flatMap(b => (b.anomalies || '').split(',').map(a => a.trim()).filter(a => a && a !== 'Aucune')))];
+  const ageOrderSimple = ['0-9 ans', '10-19 ans', '20-29 ans', '30-39 ans', '40-49 ans', '50-59 ans', '60+ ans', 'Inconnu'];
+  const sAnomaliesByAgeData = Object.entries(sAnomaliesByAge)
+    .map(([tranche, anomalies]) => ({ tranche, ...anomalies }))
+    .sort((a, b) => ageOrderSimple.indexOf(a.tranche) - ageOrderSimple.indexOf(b.tranche));
+
+  const sEmmetropieByAge = {};
+  for (const b of bilansSimples) {
+    const t = getTrancheFromAge(b.age);
+    if (!sEmmetropieByAge[t]) sEmmetropieByAge[t] = { tranche: t, total: 0, nonEmmetrope: 0, emmetrope: 0 };
+    sEmmetropieByAge[t].total++;
+    if (b.statut_refractif === 'Non emmetrope') {
+      sEmmetropieByAge[t].nonEmmetrope++;
+    } else {
+      sEmmetropieByAge[t].emmetrope++;
+    }
+  }
+  const sEmmetropieByAgeData = Object.values(sEmmetropieByAge)
+    .map(d => ({ ...d, taux: d.total ? +((d.nonEmmetrope / d.total) * 100).toFixed(1) : 0 }))
+    .sort((a, b) => ageOrderSimple.indexOf(a.tranche) - ageOrderSimple.indexOf(b.tranche));
+
+  const sAnomaliesBySexe = {};
+  for (const b of bilansSimples) {
+    const s = b.sexe || 'Inconnu';
+    if (b.anomalies) {
+      for (const a of b.anomalies.split(',')) {
+        const v = a.trim();
+        if (v && v !== 'Aucune') {
+          if (!sAnomaliesBySexe[v]) sAnomaliesBySexe[v] = {};
+          sAnomaliesBySexe[v][s] = (sAnomaliesBySexe[v][s] || 0) + 1;
+        }
+      }
+    }
+  }
+  const sAnomaliesBySexeData = Object.entries(sAnomaliesBySexe)
+    .map(([name, sexes]) => ({ name, ...sexes }))
+    .sort((a, b) => {
+      const totalA = allSexesSimple.reduce((s, k) => s + (a[k] || 0), 0);
+      const totalB = allSexesSimple.reduce((s, k) => s + (b[k] || 0), 0);
+      return totalB - totalA;
     });
 
   // ─── Filter guide cards ────────────────────────────────
@@ -1146,6 +1330,128 @@ export default function GuideStatistiques() {
               <Bar dataKey="value" name="Patients" fill="#10b981" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        );
+
+      case 's-deficience':
+        return (
+          <>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={sDeficienceData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar dataKey="value" name="Patients" radius={[6, 6, 0, 0]}>
+                  {sDeficienceData.map((d, i) => (
+                    <Cell key={i} fill={deficienceColors[d.name] || '#6b7280'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {sDeficienceData.map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-xs bg-neutral-100 dark:bg-neutral-700/50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: deficienceColors[p.name] || '#6b7280' }} />
+                    <span className="text-neutral-600 dark:text-neutral-300">{p.name}</span>
+                  </div>
+                  <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-200">{p.pct}%</span>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+
+      case 's-ametropie-sexe':
+        return (
+          <>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={sAmetropieBySexeData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {allSexesSimple.map((s, i) => (
+                  <Bar key={s} dataKey={s} name={s} fill={COLORS[i % COLORS.length]} stackId="a" radius={i === allSexesSimple.length - 1 ? [0, 6, 6, 0] : [0, 0, 0, 0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 p-3 bg-lime-50 dark:bg-lime-900/20 rounded-lg text-xs text-lime-700 dark:text-lime-300">
+              <strong>Norme STROBE :</strong> Stratification démographique par sexe – Transparence des caractéristiques de la population étudiée (ISO 13666:2019)
+            </div>
+          </>
+        );
+
+      case 's-anomalies-age':
+        return (
+          <>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={sAnomaliesByAgeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                <XAxis dataKey="tranche" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {allAnomaliesNames.map((a, i) => (
+                  <Bar key={a} dataKey={a} name={a} fill={COLORS[i % COLORS.length]} stackId="a" radius={i === allAnomaliesNames.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+              <strong>Normes :</strong> Dépistage AAO PPP par tranche d'âge · Classification ICD-11 : 9A00 (strabisme), 9A01 (amblyopie), 9A61 (glaucome), 9B10 (cataracte)
+            </div>
+          </>
+        );
+
+      case 's-emmetropie-age':
+        return (
+          <>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={sEmmetropieByAgeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                <XAxis dataKey="tranche" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} className="dark:[&_text]:fill-neutral-500" unit="%" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar dataKey="taux" name="% Non emmétrope" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {sEmmetropieByAgeData.map((d, i) => (
+                <div key={i} className="text-center bg-neutral-100 dark:bg-neutral-700/50 rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{d.tranche}</p>
+                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{d.taux}%</p>
+                  <p className="text-[10px] text-neutral-400">{d.nonEmmetrope}/{d.total} patients</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg text-xs text-cyan-700 dark:text-cyan-300">
+              <strong>Norme OMS VISION 2020 :</strong> Prévalence mondiale amétropies non corrigées ~2,7 milliards · Segmentation par âge (ISO 13666:2019)
+            </div>
+          </>
+        );
+
+      case 's-anomalies-sexe':
+        return (
+          <>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={sAnomaliesBySexeData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:[&>line]:stroke-neutral-700" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11, fill: '#6b7280' }} className="dark:[&_text]:fill-neutral-400" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {allSexesSimple.map((s, i) => (
+                  <Bar key={s} dataKey={s} name={s} fill={COLORS[i % COLORS.length]} stackId="a" radius={i === allSexesSimple.length - 1 ? [0, 6, 6, 0] : [0, 0, 0, 0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-xs text-purple-700 dark:text-purple-300">
+              <strong>Normes :</strong> Stratification STROBE · Classification ICD-11 (CIM-11) · Déclaration d'Helsinki
+            </div>
+          </>
         );
 
       default:

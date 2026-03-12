@@ -70,7 +70,7 @@
  [],
  False,
  False,
- 1773076448,
+ 1773242272,
  [('run.exe',
    'C:\\Users\\HP\\OneDrive\\Desktop\\logiciel\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
    'EXECUTABLE')],

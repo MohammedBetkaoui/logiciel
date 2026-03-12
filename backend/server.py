@@ -928,6 +928,107 @@ async def bilans_simples_stats():
         if val:
             statut_map[val] = statut_map.get(val, 0) + 1
 
+    # ─── Classification déficience visuelle OMS (ISO 8596 / ICD-11 9D90) ───
+    def _acuite_to_decimal(av_str):
+        """Convertit l'acuité visuelle en valeur décimale."""
+        if not av_str:
+            return None
+        av = av_str.strip()
+        if av in ("PL-",):
+            return 0.0
+        if av in ("PL+",):
+            return 0.01
+        if av in ("VBLM",):
+            return 0.02
+        if av in ("CLD",):
+            return 0.04
+        if "/" in av:
+            parts = av.replace("<", "").split("/")
+            try:
+                return float(parts[0]) / float(parts[1])
+            except (ValueError, ZeroDivisionError):
+                return None
+        return None
+
+    def _classifier_deficience_oms(decimal_av):
+        """Classifie l'acuité selon les seuils OMS ICD-11 9D90."""
+        if decimal_av is None:
+            return "Non classifié"
+        if decimal_av >= 0.8:
+            return "Normal (≥ 8/10)"
+        if decimal_av >= 0.5:
+            return "Déficience légère (< 8/10)"
+        if decimal_av >= 0.3:
+            return "Déficience modérée (< 5/10)"
+        if decimal_av >= 0.1:
+            return "Déficience sévère (< 3/10)"
+        if decimal_av >= 0.05:
+            return "Cécité légale (< 1/10)"
+        return "Cécité (< 0.5/10)"
+
+    deficience_map = {}
+    for b in bilans:
+        dec = _acuite_to_decimal(b.get("acuite_visuelle", ""))
+        cat = _classifier_deficience_oms(dec)
+        deficience_map[cat] = deficience_map.get(cat, 0) + 1
+
+    # ─── Amétropies par sexe (STROBE) ─────────────────────────
+    def _tranche(age):
+        if age is None:
+            return "Inconnu"
+        if age < 10: return "0-9 ans"
+        if age < 20: return "10-19 ans"
+        if age < 30: return "20-29 ans"
+        if age < 40: return "30-39 ans"
+        if age < 50: return "40-49 ans"
+        if age < 60: return "50-59 ans"
+        return "60+ ans"
+
+    ametropie_par_sexe = {}
+    for b in bilans:
+        s = b.get("sexe", "Inconnu")
+        val = b.get("ametropie", "")
+        if val:
+            for a in val.split(","):
+                a = a.strip()
+                if a:
+                    key = f"{a}|{s}"
+                    ametropie_par_sexe[key] = ametropie_par_sexe.get(key, 0) + 1
+
+    # ─── Anomalies par tranche d'âge (AAO PPP / ICD-11) ──────
+    anomalies_par_age = {}
+    for b in bilans:
+        t = _tranche(b.get("age"))
+        val = b.get("anomalies", "")
+        if val:
+            for a in val.split(","):
+                a = a.strip()
+                if a and a != "Aucune":
+                    key = f"{a}|{t}"
+                    anomalies_par_age[key] = anomalies_par_age.get(key, 0) + 1
+
+    # ─── Taux de non-emmétropie par âge (OMS VISION 2020) ─────
+    emmetropie_par_age = {}
+    for b in bilans:
+        t = _tranche(b.get("age"))
+        if t not in emmetropie_par_age:
+            emmetropie_par_age[t] = {"total": 0, "non_emmetrope": 0}
+        emmetropie_par_age[t]["total"] += 1
+        if b.get("statut_refractif") == "Non emmetrope":
+            emmetropie_par_age[t]["non_emmetrope"] += 1
+
+    # ─── Anomalies par sexe (STROBE / ICD-11) ────────────────
+    anomalies_par_sexe = {}
+    for b in bilans:
+        s = b.get("sexe", "Inconnu")
+        val = b.get("anomalies", "")
+        if val:
+            for a in val.split(","):
+                a = a.strip()
+                if a and a != "Aucune":
+                    key = f"{a}|{s}"
+                    anomalies_par_sexe[key] = anomalies_par_sexe.get(key, 0) + 1
+
     return {
         "total": total,
         "sexe": sexe_map,
@@ -936,6 +1037,11 @@ async def bilans_simples_stats():
         "anomalies": anomalies_map,
         "acuite_visuelle": acuite_map,
         "statut_refractif": statut_map,
+        "deficience_oms": deficience_map,
+        "ametropie_par_sexe": ametropie_par_sexe,
+        "anomalies_par_age": anomalies_par_age,
+        "emmetropie_par_age": emmetropie_par_age,
+        "anomalies_par_sexe": anomalies_par_sexe,
     }
 
 

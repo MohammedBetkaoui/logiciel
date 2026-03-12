@@ -45,6 +45,8 @@ const normes = [
       'Analyses statistiques de prévalence des amétropies',
       'Bilans simplifiés – Classification du statut réfractif : Emmétrope / Non emmétrope',
       'Bilans simplifiés – Définition normalisée de l\'emmétropie (absence d\'amétropie significative)',
+      'Statistiques normées – Graphique « Taux de non-emmétropie par âge » : définition emmétropie/non-emmétropie selon ISO 13666',
+      'Statistiques normées – Graphique « Amétropies par sexe » : classification des types d\'amétropie conforme à la nomenclature ISO 13666',
     ],
     seuils: [
       { label: 'Myopie forte', valeur: 'ES ≤ −6.00 D' },
@@ -75,6 +77,8 @@ const normes = [
       'Formulaire de bilan – conformité ISO 8596 sur les champs AV',
       'Bilans simplifiés – Échelle étendue : PL−, PL+, VBLM, CLD, <1/10 … 10/10',
       'Bilans simplifiés – Seuils OMS ICD-11 9D90 pour classification de la déficience visuelle',
+      'Statistiques normées – Graphique « Classification déficience visuelle OMS » : conversion AV décimale → catégories OMS (Normal ≥ 8/10, Déficience légère, modérée, sévère, Cécité)',
+      'Statistiques normées – KPI « Déficience visuelle » : pourcentage de patients sous seuil normal OMS',
     ],
     seuils: [
       { label: 'Optotype de référence', valeur: '5 arcmin (1.454 mm à 5 m)' },
@@ -163,6 +167,7 @@ const normes = [
       'Indicateur « Alertes PIO » sur le tableau de bord',
       'Bilans simplifiés – Dépistage des anomalies visuelles (strabisme, amblyopie, cataracte, glaucome, etc.)',
       'Bilans simplifiés – Recommandations de dépistage par tranche d\'âge selon AAO PPP',
+      'Statistiques normées – Graphique « Anomalies par tranche d\'âge » : répartition conforme aux recommandations AAO PPP de dépistage par groupe d\'âge',
     ],
     seuils: [
       { label: 'PIO normale', valeur: '10 – 21 mmHg' },
@@ -243,6 +248,8 @@ const normes = [
       'Bilans simplifiés – Segmentation démographique par tranche d\'âge conforme aux recommandations OMS',
       'Bilans simplifiés – Seuils de déficience visuelle OMS ICD-11 9D90 pour l\'acuité visuelle',
       'Référence épidémiologique sur les écrans de statistiques et guide statistique',
+      'Statistiques normées – Graphique « Taux de non-emmétropie par âge » : prévalence des amétropies par tranche d\'âge (réf. ~2,7 milliards de personnes dans le monde)',
+      'Statistiques normées – Graphique « Classification déficience visuelle OMS » : seuils OMS (Normal, Déf. légère/modérée/sévère, Cécité)',
     ],
     seuils: [
       { label: 'Amétropies non corrigées (mondial)', valeur: '~2,7 milliards de personnes' },
@@ -268,6 +275,9 @@ const normes = [
       'Bilans simplifiés – Statistiques de prévalence des anomalies conformes à la nomenclature CIM-11',
       'Bilans simplifiés – Radar chart des anomalies dans le guide statistique et l\'analyse',
       'Référence croisée avec AAO PPP pour les recommandations de dépistage',
+      'Statistiques normées – Graphique « Anomalies par tranche d\'âge » : codage ICD-11 (9A00, 9A01, 9A61, 9B10) pour chaque anomalie par groupe d\'âge',
+      'Statistiques normées – Graphique « Anomalies par sexe » : prévalence des anomalies ICD-11 stratifiée par sexe',
+      'Statistiques normées – Classification déficience visuelle OMS : seuils ICD-11 9D90 appliqués à l\'acuité visuelle',
     ],
     seuils: [
       { label: 'Strabisme (ICD-11 9A00)', valeur: 'Déviation oculaire mesurable' },
@@ -293,6 +303,9 @@ const normes = [
       'Bilans simplifiés – Transparence des caractéristiques de la population dans les statistiques',
       'Mention de conformité STROBE dans le guide statistique et les pieds de page d\'analyse',
       'Complément de la Déclaration d\'Helsinki pour l\'éthique des études épidémiologiques',
+      'Statistiques normées – Graphique « Amétropies par sexe » : stratification STROBE des amétropies par sexe (Homme / Femme)',
+      'Statistiques normées – Graphique « Anomalies par sexe » : stratification STROBE des anomalies visuelles par sexe',
+      'Statistiques normées – Export rapport TXT : données stratifiées par sexe conformes aux exigences STROBE',
     ],
     seuils: [],
   },
