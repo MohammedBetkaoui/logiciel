@@ -1,6 +1,6 @@
-﻿// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BBA-Data â€“ Liste des Bilans SimplifiÃ©s (avec gestion)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────
+// BBA-Data – Liste des Bilans Simplifiés (avec gestion)
+// ─────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -29,7 +29,7 @@ const inputCls =
   'w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all';
 
 function formatDate(dateStr) {
-  if (!dateStr) return 'â€”';
+  if (!dateStr) return '—';
   try {
     return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   } catch { return dateStr; }
@@ -75,7 +75,7 @@ export default function BilanSimpleList({ onEditBilan }) {
     } catch { /* error */ }
   };
 
-  // â”€â”€â”€ Edit modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Edit modal ──────────────────────────────────────────
   const openEdit = (bilan) => {
     setEditForm({
       age: bilan.age ?? '',
@@ -115,7 +115,7 @@ export default function BilanSimpleList({ onEditBilan }) {
 
   const handleEditSave = async () => {
     if (!editForm.age || !editForm.sexe || editForm.ametropie.length === 0 || !editForm.statut_refractif) {
-      setEditError('Ã‚ge, sexe, amÃ©tropie et statut rÃ©fractif sont requis.');
+      setEditError('Âge, sexe, amétropie et statut réfractif sont requis.');
       return;
     }
     setEditSaving(true);
@@ -140,7 +140,7 @@ export default function BilanSimpleList({ onEditBilan }) {
         loadBilans();
       } else {
         const err = await res.json().catch(() => ({}));
-        setEditError(err.detail || 'Erreur lors de la mise Ã  jour.');
+        setEditError(err.detail || 'Erreur lors de la mise à jour.');
       }
     } catch {
       setEditError('Impossible de contacter le serveur.');
@@ -149,7 +149,7 @@ export default function BilanSimpleList({ onEditBilan }) {
     }
   };
 
-  // â”€â”€â”€ Filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Filtering ───────────────────────────────────────────
   const filtered = useMemo(() => {
     let result = [...bilans];
     if (searchTerm) {
@@ -207,14 +207,14 @@ export default function BilanSimpleList({ onEditBilan }) {
 
   const columns = [
     { key: 'date_creation', label: 'Date' },
-    { key: 'age', label: 'Ã‚ge' },
+    { key: 'age', label: 'Âge' },
     { key: 'sexe', label: 'Sexe' },
-    { key: 'ametropie', label: 'AmÃ©tropie' },
-    { key: 'acuite_visuelle', label: 'AcuitÃ©' },
+    { key: 'ametropie', label: 'Amétropie' },
+    { key: 'acuite_visuelle', label: 'Acuité' },
     { key: 'statut_refractif', label: 'Statut' },
   ];
 
-  // â”€â”€â”€ Detail row helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Detail row helper ─────────────────────────────────
   const DetailRow = ({ label, children }) => (
     <div className="py-2">
       <p className="text-[11px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">{label}</p>
@@ -223,7 +223,7 @@ export default function BilanSimpleList({ onEditBilan }) {
   );
 
   const BadgeList = ({ text, color = 'blue' }) => {
-    if (!text) return <span className="text-neutral-400">â€”</span>;
+    if (!text) return <span className="text-neutral-400">—</span>;
     const colors = {
       blue: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
       amber: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
@@ -246,10 +246,10 @@ export default function BilanSimpleList({ onEditBilan }) {
         <div>
           <h2 className="text-lg font-bold text-neutral-800 dark:text-neutral-100 flex items-center gap-2">
             <FileText size={20} className="text-blue-500" />
-            Bilans SimplifiÃ©s
+            Bilans Simplifiés
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
-            {filtered.length} bilan{filtered.length !== 1 ? 's' : ''} trouvÃ©{filtered.length !== 1 ? 's' : ''}
+            {filtered.length} bilan{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -279,12 +279,12 @@ export default function BilanSimpleList({ onEditBilan }) {
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Rechercher par amÃ©tropie, anomalie, sexe, acuitÃ©..."
+          placeholder="Rechercher par amétropie, anomalie, sexe, acuité..."
           className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-500"
         />
       </div>
 
-      {/* Filtres avancÃ©s */}
+      {/* Filtres avancés */}
       {showFilters && (
         <div className="p-4 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -297,15 +297,15 @@ export default function BilanSimpleList({ onEditBilan }) {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Statut rÃ©fractif</label>
+              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Statut réfractif</label>
               <select value={filterStatut} onChange={(e) => setFilterStatut(e.target.value)} className={inputCls}>
                 <option value="all">Tous</option>
-                <option value="Emmetrope">EmmÃ©trope</option>
-                <option value="Non emmetrope">Non emmÃ©trope</option>
+                <option value="Emmetrope">Emmétrope</option>
+                <option value="Non emmetrope">Non emmétrope</option>
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Tranche d'Ã¢ge</label>
+              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Tranche d'âge</label>
               <select value={filterAge} onChange={(e) => setFilterAge(e.target.value)} className={inputCls}>
                 <option value="all">Toutes</option>
                 <option value="0-6">0 - 6 ans</option>
@@ -319,13 +319,13 @@ export default function BilanSimpleList({ onEditBilan }) {
             </div>
           </div>
           <button onClick={resetFilters} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
-            RÃ©initialiser les filtres
+            Réinitialiser les filtres
           </button>
         </div>
       )}
 
       <div className="flex gap-6">
-        {/* â”€â”€â”€ Main table area â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─── Main table area ──────────────────────────────── */}
         <div className={`space-y-4 transition-all ${selectedBilan ? 'flex-1 min-w-0' : 'w-full'}`}>
           {/* Table */}
           <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden">
@@ -337,7 +337,7 @@ export default function BilanSimpleList({ onEditBilan }) {
               <div className="py-16 text-center">
                 <FileText size={32} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
                 <p className="text-sm text-neutral-400">
-                  {bilans.length === 0 ? 'Aucun bilan simplifiÃ© enregistrÃ©' : 'Aucun rÃ©sultat pour cette recherche'}
+                  {bilans.length === 0 ? 'Aucun bilan simplifié enregistré' : 'Aucun résultat pour cette recherche'}
                 </p>
               </div>
             ) : (
@@ -391,7 +391,7 @@ export default function BilanSimpleList({ onEditBilan }) {
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap font-medium text-neutral-800 dark:text-neutral-100">
-                          {b.acuite_visuelle || 'â€”'}
+                          {b.acuite_visuelle || '—'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
@@ -445,7 +445,7 @@ export default function BilanSimpleList({ onEditBilan }) {
                   disabled={safePage === 0}
                   className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600"
                 >
-                  <ChevronLeft size={14} /> PrÃ©cÃ©dent
+                  <ChevronLeft size={14} /> Précédent
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
@@ -472,7 +472,7 @@ export default function BilanSimpleList({ onEditBilan }) {
           )}
         </div>
 
-        {/* â”€â”€â”€ Detail panel (right side) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─── Detail panel (right side) ──────────────────────── */}
         {selectedBilan && (
           <div className="w-80 shrink-0 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden self-start sticky top-4">
             {/* Panel header */}
@@ -489,20 +489,20 @@ export default function BilanSimpleList({ onEditBilan }) {
                 Bilan #{selectedBilan.bilan_simple_id}
               </h3>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                CrÃ©Ã© le {formatDate(selectedBilan.date_creation)}
+                Créé le {formatDate(selectedBilan.date_creation)}
               </p>
             </div>
 
             {/* Panel body */}
             <div className="px-5 py-4 space-y-1 max-h-[calc(100vh-220px)] overflow-y-auto">
-              <DetailRow label="Ã‚ge">{selectedBilan.age} ans</DetailRow>
+              <DetailRow label="Âge">{selectedBilan.age} ans</DetailRow>
               <DetailRow label="Sexe">{selectedBilan.sexe}</DetailRow>
-              <DetailRow label="AmÃ©tropie"><BadgeList text={selectedBilan.ametropie} color="blue" /></DetailRow>
+              <DetailRow label="Amétropie"><BadgeList text={selectedBilan.ametropie} color="blue" /></DetailRow>
               <DetailRow label="Anomalies"><BadgeList text={selectedBilan.anomalies} color="amber" /></DetailRow>
-              <DetailRow label="AcuitÃ© Visuelle">
-                <span className="font-medium">{selectedBilan.acuite_visuelle || 'â€”'}</span>
+              <DetailRow label="Acuité Visuelle">
+                <span className="font-medium">{selectedBilan.acuite_visuelle || '—'}</span>
               </DetailRow>
-              <DetailRow label="Statut RÃ©fractif">
+              <DetailRow label="Statut Réfractif">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
                   selectedBilan.statut_refractif === 'Emmetrope'
                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
@@ -532,7 +532,7 @@ export default function BilanSimpleList({ onEditBilan }) {
         )}
       </div>
 
-      {/* â”€â”€â”€ Edit modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─── Edit modal ─────────────────────────────────────── */}
       {editBilan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
@@ -542,7 +542,7 @@ export default function BilanSimpleList({ onEditBilan }) {
                   <Pencil size={18} className="text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Modifier le bilan simplifiÃ©</h3>
+                  <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Modifier le bilan simplifié</h3>
                   <p className="text-xs text-neutral-400">Bilan #{editBilan.bilan_simple_id}</p>
                 </div>
               </div>
@@ -558,25 +558,25 @@ export default function BilanSimpleList({ onEditBilan }) {
             )}
 
             <div className="space-y-4">
-              {/* Ã‚ge + Sexe */}
+              {/* Âge + Sexe */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Ã‚ge <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Âge <span className="text-red-400">*</span></label>
                   <input type="number" min={0} max={150} className={inputCls} value={editForm.age} onChange={(e) => handleEditChange('age', e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Sexe <span className="text-red-400">*</span></label>
                   <select className={inputCls} value={editForm.sexe} onChange={(e) => handleEditChange('sexe', e.target.value)}>
-                    <option value="">â€”</option>
+                    <option value="">—</option>
                     <option value="Homme">Homme</option>
                     <option value="Femme">Femme</option>
                   </select>
                 </div>
               </div>
 
-              {/* AmÃ©tropie */}
+              {/* Amétropie */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">AmÃ©tropie <span className="text-red-400">*</span></label>
+                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Amétropie <span className="text-red-400">*</span></label>
                 <div className="flex flex-wrap gap-1.5">
                   {AMETROPIE_OPTIONS.map((item) => {
                     const sel = editForm.ametropie?.includes(item);
@@ -588,7 +588,7 @@ export default function BilanSimpleList({ onEditBilan }) {
                             : 'bg-white dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300'
                         }`}
                       >
-                        {sel ? 'âœ“ ' : ''}{item}
+                        {sel ? '✓ ' : ''}{item}
                       </button>
                     );
                   })}
@@ -609,28 +609,28 @@ export default function BilanSimpleList({ onEditBilan }) {
                             : 'bg-white dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300'
                         }`}
                       >
-                        {sel ? 'âœ“ ' : ''}{item}
+                        {sel ? '✓ ' : ''}{item}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* AcuitÃ© + Statut */}
+              {/* Acuité + Statut */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">AcuitÃ© Visuelle</label>
+                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Acuité Visuelle</label>
                   <select className={inputCls} value={editForm.acuite_visuelle} onChange={(e) => handleEditChange('acuite_visuelle', e.target.value)}>
-                    <option value="">â€”</option>
+                    <option value="">—</option>
                     {ACUITE_VISUELLE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Statut RÃ©fractif <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Statut Réfractif <span className="text-red-400">*</span></label>
                   <select className={inputCls} value={editForm.statut_refractif} onChange={(e) => handleEditChange('statut_refractif', e.target.value)}>
-                    <option value="">â€”</option>
-                    <option value="Emmetrope">EmmÃ©trope</option>
-                    <option value="Non emmetrope">Non emmÃ©trope</option>
+                    <option value="">—</option>
+                    <option value="Emmetrope">Emmétrope</option>
+                    <option value="Non emmetrope">Non emmétrope</option>
                   </select>
                 </div>
               </div>
@@ -653,7 +653,7 @@ export default function BilanSimpleList({ onEditBilan }) {
         </div>
       )}
 
-      {/* â”€â”€â”€ Delete confirmation modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─── Delete confirmation modal ──────────────────────── */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-xl p-6 max-w-sm w-full mx-4">
@@ -663,11 +663,11 @@ export default function BilanSimpleList({ onEditBilan }) {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Supprimer le bilan</h3>
-                <p className="text-xs text-neutral-400">Cette action est irrÃ©versible</p>
+                <p className="text-xs text-neutral-400">Cette action est irréversible</p>
               </div>
             </div>
             <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-5">
-              ÃŠtes-vous sÃ»r de vouloir supprimer ce bilan simplifiÃ© ?
+              Êtes-vous sûr de vouloir supprimer ce bilan simplifié ?
             </p>
             <div className="flex justify-end gap-2">
               <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg transition-colors">

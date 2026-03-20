@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 // BBA-Data – Formulaire Bilan Simple (dépistage rapide)
-// Champs: âge, sexe, amétropie, anomalies, acuité visuelle, statut réfractif
+// Champs: âge, sexe, amétropie, anomalies, acuité visuelle
 // ─────────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -8,35 +8,117 @@ import { Save, CheckCircle, AlertTriangle, Loader2, Eye } from 'lucide-react';
 
 const AMETROPIE_OPTIONS = [
   'Myopie',
-  'Hypermetropie',
+  'Hypermétropie',
   'Astigmatisme',
-  'Presbytie',
-  'Anisometropie',
 ];
 
-const ANOMALIES_OPTIONS = [
-  'Strabisme',
-  'Amblyopie',
-  'Nystagmus',
-  'Daltonisme',
-  'Ptosis',
-  'Cataracte',
-  'Glaucome',
-  'Keratocone',
-  'Aucune',
+const ANOMALIES_GROUPS = [
+  {
+    title: "Problèmes d'accommodation",
+    options: [
+      "Insuffisance d'accommodation",
+      "Excès d'accommodation",
+      'Fatigue accommodative',
+      'Spasme accommodatif',
+      'Inertie accommodative',
+      'Paralysie accommodative',
+    ],
+  },
+  {
+    title: 'Problèmes de convergence',
+    options: [
+      'Insuffisance de convergence',
+      'Pseudo-insuffisance de convergence',
+      'Excès de convergence',
+      'Insuffisance de convergence pure',
+    ],
+  },
+  {
+    title: 'Ésophorie',
+    options: [
+      'Ésophorie basique',
+      'Insuffisance de divergence',
+      'Excès de convergence',
+    ],
+  },
+  {
+    title: 'Exophorie',
+    options: [
+      'Exophorie basique',
+      'Excès de divergence',
+      'Insuffisance de convergence',
+    ],
+  },
+  {
+    title: 'Autres',
+    options: [
+      'Phorie verticale hyper D/G',
+      'Phorie verticale hyper G/D',
+      'Paralysie oculomotrice',
+      'Dysfonctionnement vergentiel',
+      'Réserves fusionnelles réduites',
+      "Pas d'anomalie",
+    ],
+  },
 ];
+
+const ANOMALIES_OPTIONS = [...new Set(ANOMALIES_GROUPS.flatMap((group) => group.options))];
+
+const normalizeLabel = (value = '') =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const AMETROPIE_ALIASES = {
+  myopie: 'Myopie',
+  hypermetropie: 'Hypermétropie',
+  astigmatisme: 'Astigmatisme',
+};
+
+const ANOMALIE_ALIASES = {
+  "insuffisance d'accommodation": "Insuffisance d'accommodation",
+  "exces d'accommodation": "Excès d'accommodation",
+  'fatigue accommodative': 'Fatigue accommodative',
+  'spasme accommodatif': 'Spasme accommodatif',
+  'inertie accommodative': 'Inertie accommodative',
+  'paralysie accommodative': 'Paralysie accommodative',
+  'insuffisance de convergence': 'Insuffisance de convergence',
+  'pseudo-insuffisance de convergence': 'Pseudo-insuffisance de convergence',
+  'exces de convergence': 'Excès de convergence',
+  'insuffisance de convergence pure': 'Insuffisance de convergence pure',
+  'esophorie basique': 'Ésophorie basique',
+  'insuffisance de divergence': 'Insuffisance de divergence',
+  'exophorie basique': 'Exophorie basique',
+  'exces de divergence': 'Excès de divergence',
+  'phorie verticale': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper d/g': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper g/d': 'Phorie verticale hyper G/D',
+  'paralysie oculomotrice': 'Paralysie oculomotrice',
+  'dysfonctionnement vergentiel': 'Dysfonctionnement vergentiel',
+  'reserves fusionnelles reduites': 'Réserves fusionnelles réduites',
+  "pas d'anomalie": "Pas d'anomalie",
+  aucune: "Pas d'anomalie",
+};
+
+function parseCanonicalList(rawValue, aliases, allowed) {
+  if (!rawValue) return [];
+  const list = rawValue
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => aliases[normalizeLabel(item)] || item)
+    .filter((item) => allowed.includes(item));
+  return [...new Set(list)];
+}
 
 const ACUITE_VISUELLE_OPTIONS = [
-  'PL- (Pas de perception)',
-  'PL+ (Perception lumineuse)',
-  'VBLM (Voit bouger la main)',
-  'CLD (Compte les doigts)',
   '<1/10',
   '1/10', '2/10', '3/10', '4/10', '5/10',
   '6/10', '7/10', '8/10', '9/10', '10/10',
 ];
-
-const STATUT_REFRACTIF_OPTIONS = ['Emmetrope', 'Non emmetrope'];
 
 export default function BilanSimpleForm({ onSaved, existingData = null }) {
   const isEditMode = !!existingData;
@@ -46,10 +128,9 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
       return {
         age: existingData.age ?? '',
         sexe: existingData.sexe ?? '',
-        ametropie: existingData.ametropie ? existingData.ametropie.split(',').map((s) => s.trim()).filter(Boolean) : [],
-        anomalies: existingData.anomalies ? existingData.anomalies.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        ametropie: parseCanonicalList(existingData.ametropie, AMETROPIE_ALIASES, AMETROPIE_OPTIONS),
+        anomalies: parseCanonicalList(existingData.anomalies, ANOMALIE_ALIASES, ANOMALIES_OPTIONS),
         acuite_visuelle: existingData.acuite_visuelle ?? '',
-        statut_refractif: existingData.statut_refractif ?? '',
       };
     }
     return {
@@ -58,7 +139,6 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
       ametropie: [],
       anomalies: [],
       acuite_visuelle: '',
-      statut_refractif: '',
     };
   });
 
@@ -85,10 +165,10 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
   const handleAnomalieToggle = (anomalie) => {
     setFormData((prev) => {
       let updated;
-      if (anomalie === 'Aucune') {
-        updated = prev.anomalies.includes('Aucune') ? [] : ['Aucune'];
+      if (anomalie === "Pas d'anomalie") {
+        updated = prev.anomalies.includes("Pas d'anomalie") ? [] : ["Pas d'anomalie"];
       } else {
-        const without = prev.anomalies.filter((a) => a !== 'Aucune');
+        const without = prev.anomalies.filter((a) => a !== "Pas d'anomalie");
         updated = without.includes(anomalie)
           ? without.filter((a) => a !== anomalie)
           : [...without, anomalie];
@@ -106,7 +186,6 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
     if (formData.ametropie.length === 0) errs.ametropie = 'Sélectionnez au moins une amétropie';
     if (formData.anomalies.length === 0) errs.anomalies = 'Sélectionnez au moins une option';
     if (!formData.acuite_visuelle) errs.acuite_visuelle = 'Acuité visuelle requise';
-    if (!formData.statut_refractif) errs.statut_refractif = 'Statut réfractif requis';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -124,7 +203,7 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
         ametropie: formData.ametropie.join(', '),
         anomalies: formData.anomalies.join(', '),
         acuite_visuelle: formData.acuite_visuelle,
-        statut_refractif: formData.statut_refractif,
+        statut_refractif: existingData?.statut_refractif || (formData.ametropie.length > 0 ? 'Non emmetrope' : 'Emmetrope'),
       };
 
       const url = isEditMode
@@ -150,7 +229,6 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
           ametropie: [],
           anomalies: [],
           acuite_visuelle: '',
-          statut_refractif: '',
         });
       }
       if (onSaved) onSaved(result);
@@ -177,7 +255,7 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
 
         <div className="p-5 space-y-5">
           {/* Âge + Sexe */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
               <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
                 Âge *
@@ -248,30 +326,42 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
             )}
           </div>
 
-          {/* Anomalies (multi-select checkboxes) */}
+          {/* Anomalies (multi-select groupées par sous-catégories) */}
           <div className="space-y-2">
             <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
               Anomalies *
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {ANOMALIES_OPTIONS.map((anomalie) => {
-                const isSelected = formData.anomalies.includes(anomalie);
-                return (
-                  <button
-                    key={anomalie}
-                    type="button"
-                    onClick={() => handleAnomalieToggle(anomalie)}
-                    className={`px-3 py-2 text-xs rounded-lg border transition-all text-left ${
-                      isSelected
-                        ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 font-medium'
-                        : 'bg-white dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500'
-                    }`}
-                  >
-                    <span className="mr-1.5">{isSelected ? '✓' : '○'}</span>
-                    {anomalie}
-                  </button>
-                );
-              })}
+            <div className="space-y-3">
+              {ANOMALIES_GROUPS.map((group) => (
+                <div
+                  key={group.title}
+                  className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-800/30 p-3"
+                >
+                  <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-2">
+                    {group.title}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {group.options.map((anomalie) => {
+                      const isSelected = formData.anomalies.includes(anomalie);
+                      return (
+                        <button
+                          key={`${group.title}-${anomalie}`}
+                          type="button"
+                          onClick={() => handleAnomalieToggle(anomalie)}
+                          className={`px-3 py-2 text-xs rounded-lg border transition-all text-left ${
+                            isSelected
+                              ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 font-medium'
+                              : 'bg-white dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500'
+                          }`}
+                        >
+                          <span className="mr-1.5">{isSelected ? '✓' : '○'}</span>
+                          {anomalie}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
             {errors.anomalies && (
               <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
@@ -280,7 +370,7 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
             )}
           </div>
 
-          {/* Acuité Visuelle + Statut Réfractif */}
+          {/* Acuité Visuelle */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -300,28 +390,6 @@ export default function BilanSimpleForm({ onSaved, existingData = null }) {
               {errors.acuite_visuelle && (
                 <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
                   <AlertTriangle size={11} /> {errors.acuite_visuelle}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                Statut Réfractif *
-              </label>
-              <select
-                name="statut_refractif"
-                value={formData.statut_refractif}
-                onChange={handleChange}
-                className={fieldClass}
-              >
-                <option value="">— Sélectionner —</option>
-                {STATUT_REFRACTIF_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-              {errors.statut_refractif && (
-                <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                  <AlertTriangle size={11} /> {errors.statut_refractif}
                 </p>
               )}
             </div>

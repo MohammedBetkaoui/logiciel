@@ -37,14 +37,145 @@ const REQUIRED_COLUMNS = ['nom', 'prenom', 'date_naissance', 'sexe'];
 
 // ─── Mapping colonnes CSV (Bilan Simplifié) ─────────────────
 const EXPECTED_COLUMNS_SIMPLE = [
-  'age', 'sexe', 'ametropie', 'anomalies', 'acuite_visuelle', 'statut_refractif',
+  'age', 'sexe', 'ametropie', 'anomalies', 'acuite_visuelle',
+  'ametropie_myopie', 'ametropie_hypermetropie', 'ametropie_astigmatisme',
+  'anomalie_insuffisance_accommodation', 'anomalie_exces_accommodation', 'anomalie_fatigue_accommodative',
+  'anomalie_spasme_accommodatif', 'anomalie_inertie_accommodative', 'anomalie_paralysie_accommodative',
+  'anomalie_insuffisance_convergence', 'anomalie_pseudo_insuffisance_convergence', 'anomalie_exces_convergence',
+  'anomalie_insuffisance_convergence_pure', 'anomalie_esophorie_basique', 'anomalie_insuffisance_divergence',
+  'anomalie_exophorie_basique', 'anomalie_exces_divergence', 'anomalie_phorie_verticale_hyper_d_g',
+  'anomalie_phorie_verticale_hyper_g_d', 'anomalie_paralysie_oculomotrice', 'anomalie_dysfonctionnement_vergentiel',
+  'anomalie_reserves_fusionnelles_reduites', 'anomalie_pas_d_anomalie',
 ];
 
-const REQUIRED_COLUMNS_SIMPLE = ['age', 'sexe', 'ametropie', 'acuite_visuelle', 'statut_refractif'];
+const REQUIRED_COLUMNS_SIMPLE = ['age', 'sexe', 'acuite_visuelle'];
 
-const VALID_AMETROPIES = ['Myopie', 'Hypermetropie', 'Astigmatisme', 'Presbytie', 'Anisometropie'];
-const VALID_ANOMALIES = ['Strabisme', 'Amblyopie', 'Nystagmus', 'Daltonisme', 'Ptosis', 'Cataracte', 'Glaucome', 'Keratocone', 'Aucune'];
+const VALID_AMETROPIES = ['Myopie', 'Hypermétropie', 'Astigmatisme'];
+const VALID_ANOMALIES = [
+  "Insuffisance d'accommodation",
+  "Excès d'accommodation",
+  'Fatigue accommodative',
+  'Spasme accommodatif',
+  'Inertie accommodative',
+  'Paralysie accommodative',
+  'Insuffisance de convergence',
+  'Pseudo-insuffisance de convergence',
+  'Excès de convergence',
+  'Insuffisance de convergence pure',
+  'Ésophorie basique',
+  'Insuffisance de divergence',
+  'Exophorie basique',
+  'Excès de divergence',
+  'Phorie verticale hyper D/G',
+  'Phorie verticale hyper G/D',
+  'Paralysie oculomotrice',
+  'Dysfonctionnement vergentiel',
+  'Réserves fusionnelles réduites',
+  "Pas d'anomalie",
+];
 const VALID_STATUT = ['Emmetrope', 'Non emmetrope'];
+
+const normalizeLabel = (value = '') =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const AMETROPIE_ALIASES = {
+  myopie: 'Myopie',
+  hypermetropie: 'Hypermétropie',
+  astigmatisme: 'Astigmatisme',
+};
+
+const ANOMALIES_ALIASES = {
+  "insuffisance d'accommodation": "Insuffisance d'accommodation",
+  "exces d'accommodation": "Excès d'accommodation",
+  'fatigue accommodative': 'Fatigue accommodative',
+  'spasme accommodatif': 'Spasme accommodatif',
+  'inertie accommodative': 'Inertie accommodative',
+  'paralysie accommodative': 'Paralysie accommodative',
+  'insuffisance de convergence': 'Insuffisance de convergence',
+  'pseudo-insuffisance de convergence': 'Pseudo-insuffisance de convergence',
+  'exces de convergence': 'Excès de convergence',
+  'insuffisance de convergence pure': 'Insuffisance de convergence pure',
+  'esophorie basique': 'Ésophorie basique',
+  'insuffisance de divergence': 'Insuffisance de divergence',
+  'exophorie basique': 'Exophorie basique',
+  'exces de divergence': 'Excès de divergence',
+  'phorie verticale': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper d/g': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper g/d': 'Phorie verticale hyper G/D',
+  'paralysie oculomotrice': 'Paralysie oculomotrice',
+  'dysfonctionnement vergentiel': 'Dysfonctionnement vergentiel',
+  'reserves fusionnelles reduites': 'Réserves fusionnelles réduites',
+  "pas d'anomalie": "Pas d'anomalie",
+  aucune: "Pas d'anomalie",
+};
+
+const AMETROPIE_FLAG_MAP = {
+  ametropie_myopie: 'Myopie',
+  ametropie_hypermetropie: 'Hypermétropie',
+  ametropie_astigmatisme: 'Astigmatisme',
+};
+
+const ANOMALIES_FLAG_MAP = {
+  anomalie_insuffisance_accommodation: "Insuffisance d'accommodation",
+  anomalie_exces_accommodation: "Excès d'accommodation",
+  anomalie_fatigue_accommodative: 'Fatigue accommodative',
+  anomalie_spasme_accommodatif: 'Spasme accommodatif',
+  anomalie_inertie_accommodative: 'Inertie accommodative',
+  anomalie_paralysie_accommodative: 'Paralysie accommodative',
+  anomalie_insuffisance_convergence: 'Insuffisance de convergence',
+  anomalie_pseudo_insuffisance_convergence: 'Pseudo-insuffisance de convergence',
+  anomalie_exces_convergence: 'Excès de convergence',
+  anomalie_insuffisance_convergence_pure: 'Insuffisance de convergence pure',
+  anomalie_esophorie_basique: 'Ésophorie basique',
+  anomalie_insuffisance_divergence: 'Insuffisance de divergence',
+  anomalie_exophorie_basique: 'Exophorie basique',
+  anomalie_exces_divergence: 'Excès de divergence',
+  anomalie_phorie_verticale_hyper_d_g: 'Phorie verticale hyper D/G',
+  anomalie_phorie_verticale_hyper_g_d: 'Phorie verticale hyper G/D',
+  anomalie_paralysie_oculomotrice: 'Paralysie oculomotrice',
+  anomalie_dysfonctionnement_vergentiel: 'Dysfonctionnement vergentiel',
+  anomalie_reserves_fusionnelles_reduites: 'Réserves fusionnelles réduites',
+  anomalie_pas_d_anomalie: "Pas d'anomalie",
+};
+
+const truthyFlag = (value) => ['1', 'true', 'oui', 'yes', 'x'].includes(String(value || '').toLowerCase().trim());
+
+function parseSimpleAmetropies(row) {
+  const fromText = (row.ametropie || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => AMETROPIE_ALIASES[normalizeLabel(s)] || s);
+
+  const fromFlags = Object.entries(AMETROPIE_FLAG_MAP)
+    .filter(([key]) => truthyFlag(row[key]))
+    .map(([, label]) => label);
+
+  return [...new Set([...fromText, ...fromFlags])].filter((v) => VALID_AMETROPIES.includes(v));
+}
+
+function parseSimpleAnomalies(row) {
+  const fromText = (row.anomalies || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => ANOMALIES_ALIASES[normalizeLabel(s)] || s);
+
+  const fromFlags = Object.entries(ANOMALIES_FLAG_MAP)
+    .filter(([key]) => truthyFlag(row[key]))
+    .map(([, label]) => label);
+
+  let merged = [...new Set([...fromText, ...fromFlags])].filter((v) => VALID_ANOMALIES.includes(v));
+  if (merged.includes("Pas d'anomalie") && merged.length > 1) {
+    merged = merged.filter((v) => v !== "Pas d'anomalie");
+  }
+  return merged;
+}
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -113,20 +244,33 @@ function validateRowSimple(row, idx) {
     warnings.push({ line: idx + 2, col: 'age', level: 'error', msg: `Âge invalide: ${row.age}` });
   if (row.sexe && !['Homme', 'Femme'].includes(row.sexe))
     warnings.push({ line: idx + 2, col: 'sexe', level: 'warning', msg: `Sexe non reconnu: ${row.sexe}` });
-  if (row.ametropie) {
-    const vals = row.ametropie.split(',').map((s) => s.trim());
+  const parsedAmetropies = parseSimpleAmetropies(row);
+  const parsedAnomalies = parseSimpleAnomalies(row);
+
+  if (parsedAmetropies.length === 0)
+    warnings.push({ line: idx + 2, col: 'ametropie', level: 'warning', msg: 'Aucune amétropie reconnue' });
+
+  if ((row.ametropie || '').trim()) {
+    const vals = row.ametropie.split(',').map((s) => s.trim()).filter(Boolean);
     vals.forEach((v) => {
-      if (!VALID_AMETROPIES.includes(v))
+      if (!AMETROPIE_ALIASES[normalizeLabel(v)]) {
         warnings.push({ line: idx + 2, col: 'ametropie', level: 'warning', msg: `Amétropie non reconnue: ${v}` });
+      }
     });
   }
-  if (row.anomalies) {
-    const vals = row.anomalies.split(',').map((s) => s.trim());
+
+  if ((row.anomalies || '').trim()) {
+    const vals = row.anomalies.split(',').map((s) => s.trim()).filter(Boolean);
     vals.forEach((v) => {
-      if (!VALID_ANOMALIES.includes(v))
+      if (!ANOMALIES_ALIASES[normalizeLabel(v)]) {
         warnings.push({ line: idx + 2, col: 'anomalies', level: 'warning', msg: `Anomalie non reconnue: ${v}` });
+      }
     });
   }
+
+  if ((row.anomalies || '').trim() && parsedAnomalies.length === 0)
+    warnings.push({ line: idx + 2, col: 'anomalies', level: 'warning', msg: 'Aucune anomalie exploitable détectée' });
+
   if (row.statut_refractif && !VALID_STATUT.includes(row.statut_refractif))
     warnings.push({ line: idx + 2, col: 'statut_refractif', level: 'warning', msg: `Statut réfractif non reconnu: ${row.statut_refractif}` });
   return warnings;
@@ -309,13 +453,16 @@ export default function ImportCSV() {
 
     for (const row of parsed.rows) {
       try {
+        const ametropies = parseSimpleAmetropies(row);
+        const anomalies = parseSimpleAnomalies(row);
+
         const payload = {
           age: parseInt(row.age),
           sexe: row.sexe || 'Homme',
-          ametropie: (row.ametropie || '').trim(),
-          anomalies: (row.anomalies || '').trim() || null,
+          ametropie: ametropies.join(', '),
+          anomalies: anomalies.join(', ') || null,
           acuite_visuelle: (row.acuite_visuelle || '').trim() || null,
-          statut_refractif: row.statut_refractif || 'Emmetrope',
+          statut_refractif: row.statut_refractif || (ametropies.length > 0 ? 'Non emmetrope' : 'Emmetrope'),
         };
 
         const res = await fetch('http://localhost:8000/api/bilans-simples', {
@@ -552,7 +699,7 @@ export default function ImportCSV() {
                       <tr key={i} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10">
                         <td className="py-1 px-2 text-neutral-400">{i + 1}</td>
                         {parsed.headers.slice(0, 8).map((h) => (
-                          <td key={h} className="py-1 px-2 text-neutral-700 dark:text-neutral-300 max-w-[120px] truncate">
+                          <td key={h} className="py-1 px-2 text-neutral-700 dark:text-neutral-300 max-w-30 truncate">
                             {row[h] || '—'}
                           </td>
                         ))}
@@ -628,12 +775,12 @@ export default function ImportCSV() {
               <p><strong>Colonnes :</strong> {EXPECTED_COLUMNS_SIMPLE.join(', ')}</p>
               <p><strong>Amétropies valides :</strong> {VALID_AMETROPIES.join(', ')} (séparées par virgule si multiples)</p>
               <p><strong>Anomalies valides :</strong> {VALID_ANOMALIES.join(', ')} (séparées par virgule si multiples)</p>
-              <p><strong>Statut réfractif :</strong> Emmetrope, Non emmetrope</p>
+              <p><strong>Statut réfractif :</strong> non requis dans le CSV simplifié, inféré automatiquement à l'import</p>
               <p><strong>Sexe :</strong> Homme, Femme</p>
               <div className="mt-2 p-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg font-mono text-[11px]">
                 <p className="text-neutral-600 dark:text-neutral-300 mb-1">Exemple :</p>
-                <p>"age";"sexe";"ametropie";"anomalies";"acuite_visuelle";"statut_refractif"</p>
-                <p>25;"Homme";"Myopie";"Strabisme, Ptosis";"10/10";"Emmetrope"</p>
+                <p>"age";"sexe";"ametropie";"anomalies";"acuite_visuelle";"ametropie_myopie";"ametropie_hypermetropie";"ametropie_astigmatisme";"anomalie_insuffisance_accommodation";"anomalie_exces_accommodation";"anomalie_fatigue_accommodative";"anomalie_spasme_accommodatif";"anomalie_inertie_accommodative";"anomalie_paralysie_accommodative";"anomalie_insuffisance_convergence";"anomalie_pseudo_insuffisance_convergence";"anomalie_exces_convergence";"anomalie_insuffisance_convergence_pure";"anomalie_esophorie_basique";"anomalie_insuffisance_divergence";"anomalie_exophorie_basique";"anomalie_exces_divergence";"anomalie_phorie_verticale_hyper_d_g";"anomalie_phorie_verticale_hyper_g_d";"anomalie_paralysie_oculomotrice";"anomalie_dysfonctionnement_vergentiel";"anomalie_reserves_fusionnelles_reduites";"anomalie_pas_d_anomalie"</p>
+                <p>25;"Homme";"Hypermétropie";"Insuffisance d'accommodation, Excès d'accommodation";"6/10";0;1;0;1;1;0;0;1;0;1;1;0;0;1;0;1;0;1;0;0;1;0;0</p>
               </div>
             </>
           ) : (
