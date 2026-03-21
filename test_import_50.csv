@@ -1,0 +1,51 @@
+age;sexe;ametropie;anomalies;acuite_visuelle;ametropie_myopie;ametropie_hypermetropie;ametropie_astigmatisme;anomalie_insuffisance_accommodation;anomalie_exces_accommodation;anomalie_fatigue_accommodative;anomalie_spasme_accommodatif;anomalie_inertie_accommodative;anomalie_paralysie_accommodative;anomalie_insuffisance_convergence;anomalie_pseudo_insuffisance_convergence;anomalie_exces_convergence;anomalie_insuffisance_convergence_pure;anomalie_esophorie_basique;anomalie_insuffisance_divergence;anomalie_exophorie_basique;anomalie_exces_divergence;anomalie_phorie_verticale_hyper_d_g;anomalie_phorie_verticale_hyper_g_d;anomalie_paralysie_oculomotrice;anomalie_dysfonctionnement_vergentiel;anomalie_reserves_fusionnelles_reduites;anomalie_pas_d_anomalie
+12;Homme;Aucune;Pseudo-insuffisance de convergence, Excès de convergence, Insuffisance de divergence, Réserves fusionnelles réduites;4/10;0;0;0;0;0;0;0;0;0;0;1;1;0;0;1;0;0;0;0;0;0;1;0
+6;Homme;Hypermétropie, Astigmatisme;Excès d'accommodation, Insuffisance de convergence, Excès de convergence, Ésophorie basique, Insuffisance de divergence, Phorie verticale hyper D/G, Phorie verticale hyper G/D;10/10;0;1;1;0;1;0;0;0;0;1;0;1;0;1;1;0;0;1;1;0;0;0;0
+38;Homme;Myopie, Astigmatisme;Paralysie accommodative, Excès de convergence, Exophorie basique, Excès de divergence, Dysfonctionnement vergentiel;2/10;1;0;1;0;0;0;0;0;1;0;0;1;0;0;0;1;1;0;0;0;1;0;0
+35;Femme;Aucune;Excès d'accommodation, Inertie accommodative, Insuffisance de convergence pure, Ésophorie basique, Phorie verticale hyper D/G, Dysfonctionnement vergentiel;6/10;0;0;0;0;1;0;0;1;0;0;0;0;1;1;0;0;0;1;0;0;1;0;0
+31;Femme;Myopie, Astigmatisme;Spasme accommodatif, Inertie accommodative, Insuffisance de divergence, Exophorie basique, Phorie verticale hyper G/D, Paralysie oculomotrice;2/10;1;0;1;0;0;0;1;1;0;0;0;0;0;0;1;1;0;0;1;1;0;0;0
+31;Femme;Myopie;Pas d'anomalie;5/10;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+51;Femme;Hypermétropie;Insuffisance de convergence pure, Dysfonctionnement vergentiel;7/10;0;1;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;1;0;0
+79;Femme;Aucune;Fatigue accommodative, Pseudo-insuffisance de convergence, Excès de convergence, Ésophorie basique, Exophorie basique, Réserves fusionnelles réduites;1/10;0;0;0;0;0;1;0;0;0;0;1;1;0;1;0;1;0;0;0;0;0;1;0
+27;Homme;Aucune;Excès d'accommodation, Inertie accommodative, Excès de convergence, Exophorie basique, Phorie verticale hyper D/G, Phorie verticale hyper G/D;6/10;0;0;0;0;1;0;0;1;0;0;0;1;0;0;0;1;0;1;1;0;0;0;0
+75;Homme;Myopie, Astigmatisme;Ésophorie basique, Exophorie basique, Réserves fusionnelles réduites;1/10;1;0;1;0;0;0;0;0;0;0;0;0;0;1;0;1;0;0;0;0;0;1;0
+23;Femme;Hypermétropie, Astigmatisme;Spasme accommodatif, Inertie accommodative, Pseudo-insuffisance de convergence, Réserves fusionnelles réduites;4/10;0;1;1;0;0;0;1;1;0;0;1;0;0;0;0;0;0;0;0;0;0;1;0
+58;Femme;Myopie;Excès d'accommodation, Fatigue accommodative, Paralysie accommodative, Ésophorie basique, Dysfonctionnement vergentiel;9/10;1;0;0;0;1;1;0;0;1;0;0;0;0;1;0;0;0;0;0;0;1;0;0
+7;Homme;Hypermétropie, Astigmatisme;Pas d'anomalie;6/10;0;1;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+64;Homme;Astigmatisme;Pas d'anomalie;7/10;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+31;Homme;Myopie;Insuffisance d'accommodation, Excès d'accommodation, Pseudo-insuffisance de convergence, Ésophorie basique, Phorie verticale hyper D/G, Paralysie oculomotrice;2/10;1;0;0;1;1;0;0;0;0;0;1;0;0;1;0;0;0;1;0;1;0;0;0
+68;Homme;Myopie, Astigmatisme;Dysfonctionnement vergentiel, Réserves fusionnelles réduites;1/10;1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;1;0
+33;Homme;Myopie;Paralysie accommodative, Insuffisance de convergence, Pseudo-insuffisance de convergence, Insuffisance de convergence pure, Ésophorie basique, Excès de divergence;3/10;1;0;0;0;0;0;0;0;1;1;1;0;1;1;0;0;1;0;0;0;0;0;0
+61;Homme;Astigmatisme;Spasme accommodatif, Inertie accommodative, Insuffisance de convergence pure, Paralysie oculomotrice;8/10;0;0;1;0;0;0;1;1;0;0;0;0;1;0;0;0;0;0;0;1;0;0;0
+67;Homme;Myopie;Insuffisance d'accommodation, Inertie accommodative;8/10;1;0;0;1;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0
+26;Homme;Astigmatisme;Inertie accommodative, Paralysie accommodative, Excès de convergence, Réserves fusionnelles réduites;2/10;0;0;1;0;0;0;0;1;1;0;0;1;0;0;0;0;0;0;0;0;0;1;0
+32;Femme;Myopie;Inertie accommodative, Excès de convergence, Dysfonctionnement vergentiel;9/10;1;0;0;0;0;0;0;1;0;0;0;1;0;0;0;0;0;0;0;0;1;0;0
+38;Femme;Myopie;Excès de convergence, Insuffisance de divergence, Paralysie oculomotrice;5/10;1;0;0;0;0;0;0;0;0;0;0;1;0;0;1;0;0;0;0;1;0;0;0
+40;Homme;Aucune;Paralysie accommodative, Excès de divergence, Phorie verticale hyper D/G, Phorie verticale hyper G/D;7/10;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;1;1;1;0;0;0;0
+65;Femme;Myopie, Astigmatisme;Excès d'accommodation, Excès de convergence, Excès de divergence, Dysfonctionnement vergentiel;7/10;1;0;1;0;1;0;0;0;0;0;0;1;0;0;0;0;1;0;0;0;1;0;0
+54;Homme;Aucune;Spasme accommodatif, Pseudo-insuffisance de convergence, Dysfonctionnement vergentiel;7/10;0;0;0;0;0;0;1;0;0;0;1;0;0;0;0;0;0;0;0;0;1;0;0
+6;Femme;Myopie;Insuffisance d'accommodation, Fatigue accommodative;10/10;1;0;0;1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0
+46;Femme;Hypermétropie, Astigmatisme;Spasme accommodatif, Excès de convergence, Exophorie basique;10/10;0;1;1;0;0;0;1;0;0;0;0;1;0;0;0;1;0;0;0;0;0;0;0
+78;Femme;Astigmatisme;Fatigue accommodative, Paralysie accommodative;2/10;0;0;1;0;0;1;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0
+51;Femme;Myopie;Spasme accommodatif, Dysfonctionnement vergentiel;10/10;1;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0
+30;Femme;Hypermétropie, Astigmatisme;Pas d'anomalie;3/10;0;1;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+35;Homme;Myopie, Astigmatisme;Insuffisance d'accommodation, Inertie accommodative, Paralysie accommodative, Pseudo-insuffisance de convergence, Excès de convergence, Insuffisance de divergence, Phorie verticale hyper D/G, Phorie verticale hyper G/D, Dysfonctionnement vergentiel;9/10;1;0;1;1;0;0;0;1;1;0;1;1;0;0;1;0;0;1;1;0;1;0;0
+42;Femme;Hypermétropie;Insuffisance d'accommodation, Insuffisance de convergence pure, Phorie verticale hyper G/D;9/10;0;1;0;1;0;0;0;0;0;0;0;0;1;0;0;0;0;0;1;0;0;0;0
+25;Femme;Myopie;Fatigue accommodative, Insuffisance de convergence, Exophorie basique;2/10;1;0;0;0;0;1;0;0;0;1;0;0;0;0;0;1;0;0;0;0;0;0;0
+80;Homme;Myopie;Pas d'anomalie;9/10;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+73;Homme;Myopie, Astigmatisme;Insuffisance d'accommodation, Inertie accommodative, Insuffisance de divergence, Phorie verticale hyper D/G, Paralysie oculomotrice, Dysfonctionnement vergentiel, Réserves fusionnelles réduites;4/10;1;0;1;1;0;0;0;1;0;0;0;0;0;0;1;0;0;1;0;1;1;1;0
+29;Femme;Astigmatisme;Exophorie basique, Phorie verticale hyper G/D;7/10;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;1;0;0;0;0
+33;Femme;Myopie, Astigmatisme;Paralysie accommodative, Phorie verticale hyper D/G, Paralysie oculomotrice, Réserves fusionnelles réduites;4/10;1;0;1;0;0;0;0;0;1;0;0;0;0;0;0;0;0;1;0;1;0;1;0
+57;Homme;Myopie, Astigmatisme;Insuffisance d'accommodation, Excès d'accommodation, Fatigue accommodative, Spasme accommodatif, Inertie accommodative, Ésophorie basique, Exophorie basique, Phorie verticale hyper D/G;8/10;1;0;1;1;1;1;1;1;0;0;0;0;0;1;0;1;0;1;0;0;0;0;0
+38;Homme;Myopie, Astigmatisme;Inertie accommodative, Excès de convergence, Insuffisance de convergence pure, Phorie verticale hyper D/G, Dysfonctionnement vergentiel, Réserves fusionnelles réduites;1/10;1;0;1;0;0;0;0;1;0;0;0;1;1;0;0;0;0;1;0;0;1;1;0
+21;Femme;Astigmatisme;Pas d'anomalie;10/10;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+66;Femme;Hypermétropie, Astigmatisme;Pas d'anomalie;5/10;0;1;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+9;Femme;Myopie, Astigmatisme;Pas d'anomalie;9/10;1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+63;Femme;Myopie, Astigmatisme;Paralysie accommodative, Phorie verticale hyper D/G;8/10;1;0;1;0;0;0;0;0;1;0;0;0;0;0;0;0;0;1;0;0;0;0;0
+46;Homme;Myopie, Astigmatisme;Paralysie accommodative, Pseudo-insuffisance de convergence, Insuffisance de convergence pure, Insuffisance de divergence, Excès de divergence, Phorie verticale hyper D/G, Réserves fusionnelles réduites;8/10;1;0;1;0;0;0;0;0;1;0;1;0;1;0;1;0;1;1;0;0;0;1;0
+58;Homme;Myopie;Fatigue accommodative, Insuffisance de divergence, Phorie verticale hyper D/G, Dysfonctionnement vergentiel;9/10;1;0;0;0;0;1;0;0;0;0;0;0;0;0;1;0;0;1;0;0;1;0;0
+54;Femme;Myopie, Astigmatisme;Pas d'anomalie;6/10;1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+51;Femme;Astigmatisme;Spasme accommodatif, Excès de convergence, Paralysie oculomotrice, Dysfonctionnement vergentiel;10/10;0;0;1;0;0;0;1;0;0;0;0;1;0;0;0;0;0;0;0;1;1;0;0
+65;Femme;Hypermétropie, Astigmatisme;Insuffisance de convergence, Insuffisance de convergence pure, Phorie verticale hyper D/G, Dysfonctionnement vergentiel, Réserves fusionnelles réduites;5/10;0;1;1;0;0;0;0;0;0;1;0;0;1;0;0;0;0;1;0;0;1;1;0
+7;Femme;Hypermétropie, Astigmatisme;Pas d'anomalie;10/10;0;1;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1
+77;Homme;Myopie;Paralysie accommodative, Insuffisance de divergence, Phorie verticale hyper D/G;5/10;1;0;0;0;0;0;0;0;1;0;0;0;0;0;1;0;0;1;0;0;0;0;0

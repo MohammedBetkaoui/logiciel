@@ -268,6 +268,129 @@ export default function MedicalDashboard({ targetCard, onTargetCardConsumed }) {
         />
       </div>
 
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* SECTION: BILANS SIMPLIFIÉS – Résumé                   */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {simpleStats && simpleStats.total > 0 && (
+        <>
+          <div className="flex items-center gap-3 pt-2">
+            <div className="flex-1 h-px bg-emerald-200 dark:bg-emerald-800" />
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-full border border-emerald-200 dark:border-emerald-800">
+              <ClipboardList size={14} className="text-emerald-600 dark:text-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
+                Bilans Simplifiés
+              </span>
+            </div>
+            <div className="flex-1 h-px bg-emerald-200 dark:bg-emerald-800" />
+          </div>
+
+          {/* Stat Cards simplifiés */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              icon={ClipboardList}
+              label="Bilans simplifiés"
+              value={simpleStats.total}
+              color="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+              subtext="Total dépistages rapides"
+            />
+            <StatCard
+              icon={Eye}
+              label="Non emmétrope"
+              value={simpleStats.statut_refractif?.['Non emmetrope'] || 0}
+              color="bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
+              subtext={`${simpleStats.total ? (((simpleStats.statut_refractif?.['Non emmetrope'] || 0) / simpleStats.total) * 100).toFixed(0) : 0}% des bilans`}
+            />
+            <StatCard
+              icon={AlertTriangle}
+              label="Anomalies détectées"
+              value={Object.values(simpleStats.anomalies || {}).reduce((a, b) => a + b, 0)}
+              color="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+              subtext="Cas avec anomalies visuelles"
+            />
+            <StatCard
+              icon={Users}
+              label="Amétropies"
+              value={Object.keys(simpleStats.ametropies || {}).length}
+              color="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+              subtext="Types d'amétropie détectés"
+            />
+          </div>
+
+          {/* Charts simplifiés: Amétropies + Acuité visuelle (zoomables) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="cursor-pointer group relative" onClick={() => setExpandedCard('simple-ametropies')}>
+              <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+                <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+              </div>
+              <Card title="Amétropies – Dépistage rapide" description="Types d'amétropie détectés" icon={Eye}>
+                <div className="mt-3 -mx-2">
+                  {Object.keys(simpleStats.ametropies || {}).length > 0 ? (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={Object.entries(simpleStats.ametropies).map(([name, value]) => ({ name, value }))}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={85}
+                          paddingAngle={3}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                          className="dark:[&_text]:fill-neutral-400"
+                        >
+                          {Object.keys(simpleStats.ametropies).map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-sm text-neutral-400 py-8 text-center">Aucune donnée</p>
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            <div className="cursor-pointer group relative" onClick={() => setExpandedCard('simple-acuite')}>
+              <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-700/80 rounded-lg p-1.5">
+                <Maximize2 size={14} className="text-neutral-500 dark:text-neutral-400" />
+              </div>
+              <Card title="Acuité visuelle – Dépistage rapide" description="Distribution des niveaux d'acuité" icon={Activity}>
+                <div className="mt-3 -mx-2">
+                  {Object.keys(simpleStats.acuite_visuelle || {}).length > 0 ? (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={Object.entries(simpleStats.acuite_visuelle).map(([name, value]) => ({ name, value }))}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={85}
+                          paddingAngle={2}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                          className="dark:[&_text]:fill-neutral-400"
+                        >
+                          {Object.keys(simpleStats.acuite_visuelle).map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-sm text-neutral-400 py-8 text-center">Aucune donnée</p>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ─── Expanded Card Modal ─────────────────────────── */}
       {expandedCard && createPortal(
         <div
@@ -291,12 +414,16 @@ export default function MedicalDashboard({ targetCard, onTargetCardConsumed }) {
                 {expandedCard === 'pio' && 'Évolution de la PIO'}
                 {expandedCard === 'demographics' && 'Segmentation démographique'}
                 {expandedCard === 'alerts' && 'Alertes cliniques actives'}
+                {expandedCard === 'simple-ametropies' && 'Amétropies – Bilans simplifiés'}
+                {expandedCard === 'simple-acuite' && 'Acuité visuelle – Bilans simplifiés'}
               </h2>
               <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
                 {expandedCard === 'anomalies' && 'Distribution épidémiologique des pathologies détectées'}
                 {expandedCard === 'pio' && 'Pression intraoculaire (mmHg) – Seuil: 21 mmHg'}
                 {expandedCard === 'demographics' && "Répartition par tranche d'âge – population dépistée"}
                 {expandedCard === 'alerts' && 'Patients nécessitant une attention (ISO 14971)'}
+                {expandedCard === 'simple-ametropies' && 'Répartition des amétropies issues des bilans simplifiés'}
+                {expandedCard === 'simple-acuite' && "Distribution des acuités visuelles relevées (dépistage rapide)"}
               </p>
             </div>
 
@@ -363,6 +490,58 @@ export default function MedicalDashboard({ targetCard, onTargetCardConsumed }) {
               <div className="max-h-[60vh] overflow-y-auto">
                 <ClinicalAlerts alerts={alerts} />
               </div>
+            )}
+
+            {/* Bilans simplifiés – Amétropies */}
+            {expandedCard === 'simple-ametropies' && simpleStats && (
+              <ResponsiveContainer width="100%" height={480}>
+                <PieChart>
+                  <Pie
+                    data={Object.entries(simpleStats.ametropies || {}).map(([name, value]) => ({ name, value }))}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={80}
+                    outerRadius={150}
+                    paddingAngle={3}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                    className="dark:[&_text]:fill-neutral-400"
+                  >
+                    {Object.keys(simpleStats.ametropies || {}).map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+
+            {/* Bilans simplifiés – Acuité visuelle */}
+            {expandedCard === 'simple-acuite' && simpleStats && (
+              <ResponsiveContainer width="100%" height={480}>
+                <PieChart>
+                  <Pie
+                    data={Object.entries(simpleStats.acuite_visuelle || {}).map(([name, value]) => ({ name, value }))}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={80}
+                    outerRadius={150}
+                    paddingAngle={2}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+                    className="dark:[&_text]:fill-neutral-400"
+                  >
+                    {Object.keys(simpleStats.acuite_visuelle || {}).map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             )}
           </div>
         </div>,
@@ -610,118 +789,8 @@ export default function MedicalDashboard({ targetCard, onTargetCardConsumed }) {
         </Card>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION: BILANS SIMPLIFIÉS – Résumé                   */}
-      {/* ═══════════════════════════════════════════════════════ */}
-      {simpleStats && simpleStats.total > 0 && (
-        <>
-          <div className="flex items-center gap-3 pt-2">
-            <div className="flex-1 h-px bg-emerald-200 dark:bg-emerald-800" />
-            <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-full border border-emerald-200 dark:border-emerald-800">
-              <ClipboardList size={14} className="text-emerald-600 dark:text-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
-                Bilans Simplifiés
-              </span>
-            </div>
-            <div className="flex-1 h-px bg-emerald-200 dark:bg-emerald-800" />
-          </div>
-
-          {/* Stat Cards simplifiés */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              icon={ClipboardList}
-              label="Bilans simplifiés"
-              value={simpleStats.total}
-              color="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-              subtext="Total dépistages rapides"
-            />
-            <StatCard
-              icon={Eye}
-              label="Non emmétrope"
-              value={simpleStats.statut_refractif?.['Non emmetrope'] || 0}
-              color="bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-              subtext={`${simpleStats.total ? (((simpleStats.statut_refractif?.['Non emmetrope'] || 0) / simpleStats.total) * 100).toFixed(0) : 0}% des bilans`}
-            />
-            <StatCard
-              icon={AlertTriangle}
-              label="Anomalies détectées"
-              value={Object.values(simpleStats.anomalies || {}).reduce((a, b) => a + b, 0)}
-              color="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-              subtext="Cas avec anomalies visuelles"
-            />
-            <StatCard
-              icon={Users}
-              label="Amétropies"
-              value={Object.keys(simpleStats.ametropies || {}).length}
-              color="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-              subtext="Types d'amétropie détectés"
-            />
-          </div>
-
-          {/* Charts simplifiés: Amétropies + Acuité visuelle */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card title="Amétropies – Dépistage rapide" description="Types d'amétropie détectés" icon={Eye}>
-              <div className="mt-3 -mx-2">
-                {Object.keys(simpleStats.ametropies || {}).length > 0 ? (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie
-                        data={Object.entries(simpleStats.ametropies).map(([name, value]) => ({ name, value }))}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={85}
-                        paddingAngle={3}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
-                        className="dark:[&_text]:fill-neutral-400"
-                      >
-                        {Object.keys(simpleStats.ametropies).map((_, i) => (
-                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-sm text-neutral-400 py-8 text-center">Aucune donnée</p>
-                )}
-              </div>
-            </Card>
-
-            <Card title="Acuité visuelle – Dépistage rapide" description="Distribution des niveaux d'acuité" icon={Activity}>
-              <div className="mt-3 -mx-2">
-                {Object.keys(simpleStats.acuite_visuelle || {}).length > 0 ? (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie
-                        data={Object.entries(simpleStats.acuite_visuelle).map(([name, value]) => ({ name, value }))}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={85}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        labelLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
-                        className="dark:[&_text]:fill-neutral-400"
-                      >
-                        {Object.keys(simpleStats.acuite_visuelle).map((_, i) => (
-                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-sm text-neutral-400 py-8 text-center">Aucune donnée</p>
-                )}
-              </div>
-            </Card>
-          </div>
-        </>
-      )}
     </div>
   );
 }
+
+

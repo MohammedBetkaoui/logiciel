@@ -14,7 +14,7 @@ import BilanDetails from '../components/medical/BilanDetails';
 export default function Bilans() {
   // view: 'list' | 'new' | 'new-simple' | 'details' | 'edit'
   const [view, setView] = useState('list');
-  const [listTab, setListTab] = useState('complet'); // 'complet' | 'simple'
+  const [listTab, setListTab] = useState('simple'); // 'complet' | 'simple'
   const [selectedBilanId, setSelectedBilanId] = useState(null);
   const [editData, setEditData] = useState(null);
 
@@ -125,6 +125,17 @@ export default function Bilans() {
           <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-fit">
             <button
               type="button"
+              onClick={() => setListTab('simple')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                listTab === 'simple'
+                  ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+              }`}
+            >
+              Bilans Simplifiés
+            </button>
+            <button
+              type="button"
               onClick={() => setListTab('complet')}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
                 listTab === 'complet'
@@ -133,17 +144,6 @@ export default function Bilans() {
               }`}
             >
               Bilans Optométriques
-            </button>
-            <button
-              type="button"
-              onClick={() => setListTab('simple')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                listTab === 'simple'
-                  ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
-              }`}
-            >
-              Bilans Simplifiés
             </button>
           </div>
 

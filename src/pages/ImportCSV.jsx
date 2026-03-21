@@ -278,7 +278,7 @@ function validateRowSimple(row, idx) {
 
 export default function ImportCSV() {
   const fileRef = useRef(null);
-  const [importMode, setImportMode] = useState('complet'); // 'complet' | 'simple'
+  const [importMode, setImportMode] = useState('simple'); // 'complet' | 'simple'
   const [file, setFile] = useState(null);
   const [parsed, setParsed] = useState(null);
   const [validations, setValidations] = useState([]);
@@ -546,6 +546,17 @@ export default function ImportCSV() {
       <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-fit">
         <button
           type="button"
+          onClick={() => handleSwitchMode('simple')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+            importMode === 'simple'
+              ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+          }`}
+        >
+          Bilan Simplifié
+        </button>
+        <button
+          type="button"
           onClick={() => handleSwitchMode('complet')}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
             importMode === 'complet'
@@ -554,17 +565,6 @@ export default function ImportCSV() {
           }`}
         >
           Bilan Optométrique
-        </button>
-        <button
-          type="button"
-          onClick={() => handleSwitchMode('simple')}
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-            importMode === 'simple'
-              ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm'
-              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
-          }`}
-        >
-          Bilan Simplifié
         </button>
       </div>
 

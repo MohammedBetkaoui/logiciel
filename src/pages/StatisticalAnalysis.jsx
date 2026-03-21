@@ -99,7 +99,7 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
   const [bilans, setBilans] = useState([]);
   const [bilansSimples, setBilansSimples] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [section, setSection] = useState('complet'); // 'complet' | 'simple'
+  const [section, setSection] = useState('simple'); // 'complet' | 'simple'
   const [filter, setFilter] = useState({ sexe: 'all', tranche: 'all' });
   const [filterSimple, setFilterSimple] = useState({ sexe: 'all', tranche: 'all' });
   const [expandedCard, setExpandedCard] = useState(null);
@@ -664,17 +664,6 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
       {/* ─── Section Tabs ─────────────────────────────────── */}
       <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl w-fit">
         <button
-          onClick={() => setSection('complet')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            section === 'complet'
-              ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm'
-              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
-          }`}
-        >
-          <Eye size={15} />
-          Bilans Optométriques
-        </button>
-        <button
           onClick={() => setSection('simple')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             section === 'simple'
@@ -684,6 +673,17 @@ export default function StatisticalAnalysis({ targetCard, onTargetCardConsumed }
         >
           <ClipboardList size={15} />
           Bilans Simplifiés
+        </button>
+        <button
+          onClick={() => setSection('complet')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            section === 'complet'
+              ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
+          }`}
+        >
+          <Eye size={15} />
+          Bilans Optométriques
         </button>
       </div>
 
