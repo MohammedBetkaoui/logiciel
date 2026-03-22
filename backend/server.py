@@ -5,6 +5,7 @@
 
 import logging
 import sqlite3
+import unicodedata
 from contextlib import asynccontextmanager
 from datetime import datetime, date
 from typing import Optional
@@ -971,6 +972,66 @@ async def create_bilan_simple(bilan: BilanSimpleCreate):
 @app.get("/api/bilans-simples/stats")
 async def bilans_simples_stats():
     """Statistiques agrégées sur les bilans simplifiés."""
+    def _normalize_label(value: str) -> str:
+        if not value:
+            return ""
+        normalized = unicodedata.normalize("NFD", str(value).lower())
+        without_accents = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+        return " ".join(without_accents.split()).strip()
+
+    ametropie_aliases = {
+        "myopie": "Myopie",
+        "hypermetropie": "Hypermétropie",
+        "astigmatisme": "Astigmatisme",
+    }
+
+    anomalie_aliases = {
+        "insuffisance d'accommodation": "Insuffisance d'accommodation",
+        "exces d'accommodation": "Excès d'accommodation",
+        "fatigue accommodative": "Fatigue accommodative",
+        "spasme accommodatif": "Spasme accommodatif",
+        "inertie accommodative": "Inertie accommodative",
+        "paralysie accommodative": "Paralysie accommodative",
+        "insuffisance de convergence": "Insuffisance de convergence",
+        "pseudo-insuffisance de convergence": "Pseudo-insuffisance de convergence",
+        "exces de convergence": "Excès de convergence",
+        "insuffisance de convergence pure": "Insuffisance de convergence pure",
+        "esophorie basique": "Ésophorie basique",
+        "insuffisance de divergence": "Insuffisance de divergence",
+        "exophorie basique": "Exophorie basique",
+        "exces de divergence": "Excès de divergence",
+        "phorie verticale": "Phorie verticale hyper D/G",
+        "phorie verticale hyper d/g": "Phorie verticale hyper D/G",
+        "phorie verticale hyper g/d": "Phorie verticale hyper G/D",
+        "paralysie oculomotrice": "Paralysie oculomotrice",
+        "dysfonctionnement vergentiel": "Dysfonctionnement vergentiel",
+        "reserves fusionnelles reduites": "Réserves fusionnelles réduites",
+        "pas d'anomalie": "Pas d'anomalie",
+        "aucune": "Pas d'anomalie",
+    }
+    no_anomaly_labels = {"Pas d'anomalie", "Aucune"}
+
+    statut_aliases = {
+        "emmetrope": "Emmetrope",
+        "non emmetrope": "Non emmetrope",
+        "non emmetropie": "Non emmetrope",
+    }
+
+    def _canonicalize(value: str, aliases: dict) -> str:
+        cleaned = str(value).strip()
+        key = _normalize_label(cleaned)
+        return aliases.get(key, cleaned)
+
+    def _split_multi_values(raw_value: Optional[str], aliases: dict):
+        if not raw_value:
+            return []
+        values = []
+        for item in str(raw_value).split(","):
+            candidate = item.strip()
+            if candidate:
+                values.append(_canonicalize(candidate, aliases))
+        return values
+
     rows = db_conn.execute(
         "SELECT * FROM bilans_simples ORDER BY date_creation DESC"
     ).fetchall()
@@ -1008,22 +1069,15 @@ async def bilans_simples_stats():
     # Répartition des amétropies
     ametropie_map = {}
     for b in bilans:
-        val = b.get("ametropie", "")
-        if val:
-            for a in val.split(","):
-                a = a.strip()
-                if a:
-                    ametropie_map[a] = ametropie_map.get(a, 0) + 1
+        for ametropie in _split_multi_values(b.get("ametropie", ""), ametropie_aliases):
+            ametropie_map[ametropie] = ametropie_map.get(ametropie, 0) + 1
 
     # Répartition des anomalies
     anomalies_map = {}
     for b in bilans:
-        val = b.get("anomalies", "")
-        if val:
-            for a in val.split(","):
-                a = a.strip()
-                if a:
-                    anomalies_map[a] = anomalies_map.get(a, 0) + 1
+        for anomalie in _split_multi_values(b.get("anomalies", ""), anomalie_aliases):
+            if anomalie not in no_anomaly_labels:
+                anomalies_map[anomalie] = anomalies_map.get(anomalie, 0) + 1
 
     # Répartition acuité visuelle
     acuite_map = {}
@@ -1037,7 +1091,8 @@ async def bilans_simples_stats():
     for b in bilans:
         val = b.get("statut_refractif", "")
         if val:
-            statut_map[val] = statut_map.get(val, 0) + 1
+            canon = _canonicalize(val, statut_aliases)
+            statut_map[canon] = statut_map.get(canon, 0) + 1
 
     # ─── Classification déficience visuelle OMS (ISO 8596 / ICD-11 9D90) ───
     def _acuite_to_decimal(av_str):
@@ -1098,25 +1153,18 @@ async def bilans_simples_stats():
     ametropie_par_sexe = {}
     for b in bilans:
         s = b.get("sexe", "Inconnu")
-        val = b.get("ametropie", "")
-        if val:
-            for a in val.split(","):
-                a = a.strip()
-                if a:
-                    key = f"{a}|{s}"
-                    ametropie_par_sexe[key] = ametropie_par_sexe.get(key, 0) + 1
+        for ametropie in _split_multi_values(b.get("ametropie", ""), ametropie_aliases):
+            key = f"{ametropie}|{s}"
+            ametropie_par_sexe[key] = ametropie_par_sexe.get(key, 0) + 1
 
     # ─── Anomalies par tranche d'âge (AAO PPP / ICD-11) ──────
     anomalies_par_age = {}
     for b in bilans:
         t = _tranche(b.get("age"))
-        val = b.get("anomalies", "")
-        if val:
-            for a in val.split(","):
-                a = a.strip()
-                if a and a != "Aucune":
-                    key = f"{a}|{t}"
-                    anomalies_par_age[key] = anomalies_par_age.get(key, 0) + 1
+        for anomalie in _split_multi_values(b.get("anomalies", ""), anomalie_aliases):
+            if anomalie not in no_anomaly_labels:
+                key = f"{anomalie}|{t}"
+                anomalies_par_age[key] = anomalies_par_age.get(key, 0) + 1
 
     # ─── Taux de non-emmétropie par âge (OMS VISION 2020) ─────
     emmetropie_par_age = {}
@@ -1132,13 +1180,10 @@ async def bilans_simples_stats():
     anomalies_par_sexe = {}
     for b in bilans:
         s = b.get("sexe", "Inconnu")
-        val = b.get("anomalies", "")
-        if val:
-            for a in val.split(","):
-                a = a.strip()
-                if a and a != "Aucune":
-                    key = f"{a}|{s}"
-                    anomalies_par_sexe[key] = anomalies_par_sexe.get(key, 0) + 1
+        for anomalie in _split_multi_values(b.get("anomalies", ""), anomalie_aliases):
+            if anomalie not in no_anomaly_labels:
+                key = f"{anomalie}|{s}"
+                anomalies_par_sexe[key] = anomalies_par_sexe.get(key, 0) + 1
 
     return {
         "total": total,

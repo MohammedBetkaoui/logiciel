@@ -86,6 +86,57 @@ function getTrancheAge(dateNaissance) {
   return '60+ ans';
 }
 
+const SIMPLE_AMETROPIE_ALIASES = {
+  myopie: 'Myopie',
+  hypermetropie: 'Hypermétropie',
+  astigmatisme: 'Astigmatisme',
+};
+
+const SIMPLE_ANOMALIE_ALIASES = {
+  "insuffisance d'accommodation": "Insuffisance d'accommodation",
+  "exces d'accommodation": "Excès d'accommodation",
+  'fatigue accommodative': 'Fatigue accommodative',
+  'spasme accommodatif': 'Spasme accommodatif',
+  'inertie accommodative': 'Inertie accommodative',
+  'paralysie accommodative': 'Paralysie accommodative',
+  'insuffisance de convergence': 'Insuffisance de convergence',
+  'pseudo-insuffisance de convergence': 'Pseudo-insuffisance de convergence',
+  'exces de convergence': 'Excès de convergence',
+  'insuffisance de convergence pure': 'Insuffisance de convergence pure',
+  'esophorie basique': 'Ésophorie basique',
+  'insuffisance de divergence': 'Insuffisance de divergence',
+  'exophorie basique': 'Exophorie basique',
+  'exces de divergence': 'Excès de divergence',
+  'phorie verticale': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper d/g': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper g/d': 'Phorie verticale hyper G/D',
+  'paralysie oculomotrice': 'Paralysie oculomotrice',
+  'dysfonctionnement vergentiel': 'Dysfonctionnement vergentiel',
+  'reserves fusionnelles reduites': 'Réserves fusionnelles réduites',
+  "pas d'anomalie": "Pas d'anomalie",
+  aucune: "Pas d'anomalie",
+};
+
+const SIMPLE_NO_ANOMALY_LABEL = "Pas d'anomalie";
+
+function normalizeSimpleLabel(value = '') {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseSimpleValues(rawValue, aliases) {
+  if (!rawValue) return [];
+  return rawValue
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => aliases[normalizeSimpleLabel(item)] || item);
+}
+
 // ─── Tooltip personnalisé ────────────────────────────────────
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -678,11 +729,8 @@ export default function GuideStatistiques() {
 
   const sAmetropieMap = {};
   for (const b of bilansSimples) {
-    if (b.ametropie) {
-      for (const a of b.ametropie.split(',')) {
-        const v = a.trim();
-        if (v) sAmetropieMap[v] = (sAmetropieMap[v] || 0) + 1;
-      }
+    for (const v of parseSimpleValues(b.ametropie, SIMPLE_AMETROPIE_ALIASES)) {
+      sAmetropieMap[v] = (sAmetropieMap[v] || 0) + 1;
     }
   }
   const sAmetropieData = Object.entries(sAmetropieMap)
@@ -691,11 +739,8 @@ export default function GuideStatistiques() {
 
   const sAnomaliesMap = {};
   for (const b of bilansSimples) {
-    if (b.anomalies) {
-      for (const a of b.anomalies.split(',')) {
-        const v = a.trim();
-        if (v && v !== 'Aucune') sAnomaliesMap[v] = (sAnomaliesMap[v] || 0) + 1;
-      }
+    for (const v of parseSimpleValues(b.anomalies, SIMPLE_ANOMALIE_ALIASES)) {
+      if (v !== SIMPLE_NO_ANOMALY_LABEL) sAnomaliesMap[v] = (sAnomaliesMap[v] || 0) + 1;
     }
   }
   const sAnomaliesData = Object.entries(sAnomaliesMap)
@@ -775,14 +820,9 @@ export default function GuideStatistiques() {
   const sAmetropieBySexe = {};
   for (const b of bilansSimples) {
     const s = b.sexe || 'Inconnu';
-    if (b.ametropie) {
-      for (const a of b.ametropie.split(',')) {
-        const v = a.trim();
-        if (v) {
-          if (!sAmetropieBySexe[v]) sAmetropieBySexe[v] = {};
-          sAmetropieBySexe[v][s] = (sAmetropieBySexe[v][s] || 0) + 1;
-        }
-      }
+    for (const v of parseSimpleValues(b.ametropie, SIMPLE_AMETROPIE_ALIASES)) {
+      if (!sAmetropieBySexe[v]) sAmetropieBySexe[v] = {};
+      sAmetropieBySexe[v][s] = (sAmetropieBySexe[v][s] || 0) + 1;
     }
   }
   const allSexesSimple = [...new Set(bilansSimples.map(b => b.sexe || 'Inconnu'))];
@@ -797,17 +837,20 @@ export default function GuideStatistiques() {
   const sAnomaliesByAge = {};
   for (const b of bilansSimples) {
     const t = getTrancheFromAge(b.age);
-    if (b.anomalies) {
-      for (const a of b.anomalies.split(',')) {
-        const v = a.trim();
-        if (v && v !== 'Aucune') {
-          if (!sAnomaliesByAge[t]) sAnomaliesByAge[t] = {};
-          sAnomaliesByAge[t][v] = (sAnomaliesByAge[t][v] || 0) + 1;
-        }
+    for (const v of parseSimpleValues(b.anomalies, SIMPLE_ANOMALIE_ALIASES)) {
+      if (v !== SIMPLE_NO_ANOMALY_LABEL) {
+        if (!sAnomaliesByAge[t]) sAnomaliesByAge[t] = {};
+        sAnomaliesByAge[t][v] = (sAnomaliesByAge[t][v] || 0) + 1;
       }
     }
   }
-  const allAnomaliesNames = [...new Set(bilansSimples.flatMap(b => (b.anomalies || '').split(',').map(a => a.trim()).filter(a => a && a !== 'Aucune')))];
+  const allAnomaliesNames = [
+    ...new Set(
+      bilansSimples.flatMap((b) =>
+        parseSimpleValues(b.anomalies, SIMPLE_ANOMALIE_ALIASES).filter((a) => a !== SIMPLE_NO_ANOMALY_LABEL)
+      )
+    ),
+  ];
   const ageOrderSimple = ['0-9 ans', '10-19 ans', '20-29 ans', '30-39 ans', '40-49 ans', '50-59 ans', '60+ ans', 'Inconnu'];
   const sAnomaliesByAgeData = Object.entries(sAnomaliesByAge)
     .map(([tranche, anomalies]) => ({ tranche, ...anomalies }))
@@ -831,13 +874,10 @@ export default function GuideStatistiques() {
   const sAnomaliesBySexe = {};
   for (const b of bilansSimples) {
     const s = b.sexe || 'Inconnu';
-    if (b.anomalies) {
-      for (const a of b.anomalies.split(',')) {
-        const v = a.trim();
-        if (v && v !== 'Aucune') {
-          if (!sAnomaliesBySexe[v]) sAnomaliesBySexe[v] = {};
-          sAnomaliesBySexe[v][s] = (sAnomaliesBySexe[v][s] || 0) + 1;
-        }
+    for (const v of parseSimpleValues(b.anomalies, SIMPLE_ANOMALIE_ALIASES)) {
+      if (v !== SIMPLE_NO_ANOMALY_LABEL) {
+        if (!sAnomaliesBySexe[v]) sAnomaliesBySexe[v] = {};
+        sAnomaliesBySexe[v][s] = (sAnomaliesBySexe[v][s] || 0) + 1;
       }
     }
   }
