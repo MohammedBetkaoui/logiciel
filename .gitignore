@@ -2,11 +2,29 @@ node_modules/
 dist/
 .vite/
 *.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local env/config
+.env
+.env.*
+.vscode/
+.idea/
+
+# Package managers
+.pnp.*
+
+# Virtual envs
+.venv/
+env/
 
 # Build outputs
 release/
 *.exe
 *.blockmap
+win-unpacked/
+*.asar
 
 # Database
 *.db
@@ -18,6 +36,10 @@ data/bbadata.db
 # Python cache
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
 
 # OS files
 .DS_Store
