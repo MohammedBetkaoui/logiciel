@@ -184,6 +184,31 @@ def _v(val, suffix=""):
     return f"{val}{suffix}"
 
 
+def _format_pio_method(value):
+    """Convert technical PIO method identifiers to clean French labels."""
+    if value is None:
+        return "—"
+
+    raw = str(value).strip()
+    if not raw:
+        return "—"
+
+    normalized = raw.lower().replace("-", "_").replace(" ", "_")
+    label_map = {
+        "tonometre_air": "Tonomètre à air",
+        "air": "Tonomètre à air",
+        "applanation": "Tonométrie par aplanation",
+        "tonometre_applanation": "Tonométrie par aplanation",
+        "icare": "Tonomètre iCare",
+        "tonometre_icare": "Tonomètre iCare",
+    }
+
+    if normalized in label_map:
+        return label_map[normalized]
+
+    return raw.replace("_", " ").capitalize()
+
+
 def _p(text, style):
     """Create a Paragraph from text and style."""
     return Paragraph(str(text), style)
@@ -483,7 +508,7 @@ def _build_acuite_section(data, styles):
     widths = _auto_col_widths(["", "SANS CORRECTION", "AVEC CORRECTION"], raw_rows, SECTION_INNER_W, min_width=70)
     t = Table(rows, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle(_data_table_style(3, 3)))
-    return _build_section("👁  Acuité Visuelle", "ISO 8596", t, styles)
+    return _build_section("ACUITE VISUELLE", "ISO 8596", t, styles)
 
 
 def _build_refraction_obj_section(data, styles):
@@ -519,7 +544,7 @@ def _build_refraction_obj_section(data, styles):
     widths = _auto_col_widths(["", "SPHÈRE", "CYLINDRE", "AXE"], raw_rows, SECTION_INNER_W, min_width=64)
     t = Table(rows, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle(_data_table_style(2, 4)))
-    return _build_section("🔬  Réfraction Objective", "AUTORÉFRACTOMÈTRE", t, styles)
+    return _build_section("REFRACTION OBJECTIVE", "AUTORÉFRACTOMÈTRE", t, styles)
 
 
 def _build_prescription_section(data, styles):
@@ -564,7 +589,7 @@ def _build_prescription_section(data, styles):
     ]
     t = Table(rows, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle(_data_table_style(2, 7)))
-    return _build_section("📋  Réfraction Subjective – Prescription", "ISO 13666", t, styles)
+    return _build_section("REFRACTION SUBJECTIVE - PRESCRIPTION", "ISO 13666", t, styles)
 
 
 def _build_distances_pio_section(data, styles):
@@ -576,7 +601,7 @@ def _build_distances_pio_section(data, styles):
         ("DP BINOCULAIRE", _v(dp.get("dp_bino")), True),
         ("PIO OD", _v(dp.get("pio_od")), True),
         ("PIO OG", _v(dp.get("pio_og")), True),
-        ("MÉTHODE PIO", _v(dp.get("methode")), False),
+        ("MÉTHODE PIO", _format_pio_method(dp.get("methode")), False),
     ]
     label_row = []
     value_row = []
@@ -613,7 +638,7 @@ def _build_distances_pio_section(data, styles):
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
     ]))
-    return _build_section("📐  Distances Pupillaires & Pression Intraoculaire", "", t, styles)
+    return _build_section("DISTANCES PUPILLAIRES & PRESSION INTRAOCULAIRE", "", t, styles)
 
 
 def _build_examens_section(data, styles):
@@ -659,7 +684,7 @@ def _build_examens_section(data, styles):
         # Separator line between first and second rows of fields
         ("LINEBELOW", (0, 1), (-1, 1), 0.5, C_BORDER),
     ]))
-    return _build_section("🔍  Vision Binoculaire & Examens Complémentaires", "", t, styles)
+    return _build_section("VISION BINOCULAIRE & EXAMENS COMPLEMENTAIRES", "", t, styles)
 
 
 def _build_diagnostic_section(data, styles):
@@ -695,25 +720,8 @@ def _build_diagnostic_section(data, styles):
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
 
-    # Stamp "DOCUMENT VÉRIFIÉ"
-    stamp = Table(
-        [[_p("●  DOCUMENT VÉRIFIÉ", ParagraphStyle(
-            "StampText", fontName="Helvetica-Bold", fontSize=7,
-            leading=9, textColor=C_GREEN, alignment=TA_CENTER,
-        ))]],
-        colWidths=[100], rowHeights=[18],
-    )
-    stamp.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, C_GREEN),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-    ]))
-
     content = Table([
         [diag_box, obs_box],
-        ["", stamp],
     ], colWidths=[SECTION_INNER_W * 0.50, SECTION_INNER_W * 0.50])
     content.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -724,7 +732,7 @@ def _build_diagnostic_section(data, styles):
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
     ]))
 
-    return _build_section("📝  Diagnostic & Conclusion", "", content, styles)
+    return _build_section("DIAGNOSTIC & CONCLUSION", "", content, styles)
 
 
 def _build_footer(data, styles):
