@@ -9,6 +9,22 @@ let backendReady = false;
 
 // ─── Find a working Python executable (dev mode only) ───────────
 function findPython() {
+  // First: try to find Python from virtual environment
+  const projectRoot = path.join(__dirname, '..');
+  let venvPython = null;
+
+  if (process.platform === 'win32') {
+    venvPython = path.join(projectRoot, '.venv', 'Scripts', 'python.exe');
+  } else {
+    venvPython = path.join(projectRoot, '.venv', 'bin', 'python');
+  }
+
+  if (fs.existsSync(venvPython)) {
+    console.log(`[DEV] Found venv Python: ${venvPython}`);
+    return venvPython;
+  }
+
+  // Fallback: search system PATH
   const candidates = process.platform === 'win32'
     ? ['python', 'python3', 'py']
     : ['python3', 'python'];
@@ -16,6 +32,7 @@ function findPython() {
   for (const cmd of candidates) {
     try {
       execSync(`${cmd} --version`, { stdio: 'pipe', timeout: 5000 });
+      console.log(`[DEV] Found system Python: ${cmd}`);
       return cmd;
     } catch {
       // try next
