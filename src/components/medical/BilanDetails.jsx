@@ -31,6 +31,75 @@ function fmtDate(dateStr) {
   } catch { return dateStr; }
 }
 
+function toDisplayLabel(key) {
+  const labels = {
+    examen_id: 'ID Bilan',
+    patient_id: 'ID Patient',
+    date_examen: 'Date examen',
+    date_creation: 'Date création',
+    date_modification: 'Date modification',
+    nom: 'Nom',
+    prenom: 'Prénom',
+    date_naissance: 'Date naissance',
+    sexe: 'Sexe',
+    adresse: 'Adresse',
+    code_postal: 'Code postal',
+    ville: 'Ville',
+    telephone: 'Téléphone',
+    email: 'Email',
+    numero_securite_sociale: 'N° sécurité sociale',
+    mutuelle: 'Mutuelle',
+    numero_adherent: 'N° adhérent',
+    consentement_rgpd: 'Consentement RGPD',
+    praticien: 'Praticien',
+    niveau_urgence: 'Niveau urgence',
+    signature_hash: 'Signature hash',
+    alerte_clinique: 'Alerte clinique',
+  };
+
+  if (labels[key]) return labels[key];
+  return key
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function toDisplayValue(key, val) {
+  if (val === null || val === undefined || val === '') return '—';
+
+  if (typeof val === 'boolean') return val ? 'Oui' : 'Non';
+
+  if (key === 'consentement_rgpd') return Number(val) === 1 ? 'Oui' : 'Non';
+
+  if (key.includes('date_')) {
+    try {
+      const d = new Date(val);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleString('fr-FR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+    } catch {
+      return String(val);
+    }
+  }
+
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val);
+    } catch {
+      return String(val);
+    }
+  }
+
+  return String(val);
+}
+
 // ─── Composants d'affichage ──────────────────────────────────
 function DataField({ label, value, highlight, mono }) {
   return (
@@ -646,6 +715,8 @@ export default function BilanDetails({ examenId, onBack }) {
     );
   }
 
+  const orderedEntries = Object.entries(bilan).sort(([a], [b]) => a.localeCompare(b));
+
   return (
     <div className="space-y-5">
       {/* ─── Header ─────────────────────────────────────────── */}
@@ -698,6 +769,32 @@ export default function BilanDetails({ examenId, onBack }) {
             </p>
           </div>
           <UrgenceBadge niveau={bilan.niveau_urgence ?? 0} />
+        </div>
+      </div>
+
+      {/* ─── Identité / administratif ───────────────────────── */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5">
+        <SectionTitle icon={User} title="Informations Patient & Administratives" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <DataField label="ID Bilan" value={fmt(bilan.examen_id)} mono />
+          <DataField label="ID Patient" value={fmt(bilan.patient_id)} mono />
+          <DataField label="Nom" value={fmt(bilan.nom)} />
+          <DataField label="Prénom" value={fmt(bilan.prenom)} />
+          <DataField label="Date de naissance" value={fmt(bilan.date_naissance)} />
+          <DataField label="Sexe" value={fmt(bilan.sexe)} />
+          <DataField label="Praticien" value={fmt(bilan.praticien)} />
+          <DataField label="Niveau urgence" value={fmt(bilan.niveau_urgence)} mono />
+          <DataField label="Adresse" value={fmt(bilan.adresse)} />
+          <DataField label="Code postal" value={fmt(bilan.code_postal)} />
+          <DataField label="Ville" value={fmt(bilan.ville)} />
+          <DataField label="Téléphone" value={fmt(bilan.telephone)} />
+          <DataField label="Email" value={fmt(bilan.email)} />
+          <DataField label="N° sécurité sociale" value={fmt(bilan.numero_securite_sociale)} />
+          <DataField label="Mutuelle" value={fmt(bilan.mutuelle)} />
+          <DataField label="N° adhérent" value={fmt(bilan.numero_adherent)} />
+          <DataField label="Consentement RGPD" value={bilan.consentement_rgpd === 1 ? 'Oui' : 'Non'} />
+          <DataField label="Créé le" value={toDisplayValue('date_creation', bilan.date_creation)} />
+          <DataField label="Modifié le" value={toDisplayValue('date_modification', bilan.date_modification)} />
         </div>
       </div>
 
@@ -846,6 +943,24 @@ export default function BilanDetails({ examenId, onBack }) {
           <Shield size={10} /> Hash : {bilan.signature_hash?.slice(0, 16) || 'N/A'}…
         </span>
         <span>ISO 13666 · ISO 8596 · RGPD · CEI 62304</span>
+      </div>
+
+      {/* ─── Vue complète de tous les champs ──────────────── */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5">
+        <SectionTitle icon={Shield} title="Données Complètes du Bilan" badge={`${orderedEntries.length} champs`} />
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+          Cette section affiche tous les champs disponibles dans le bilan pour éviter toute omission d'information.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {orderedEntries.map(([key, val]) => (
+            <DataField
+              key={key}
+              label={toDisplayLabel(key)}
+              value={toDisplayValue(key, val)}
+              mono={key.includes('id') || key.includes('hash')}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

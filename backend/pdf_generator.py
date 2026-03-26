@@ -12,13 +12,13 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     SimpleDocTemplate,
     Table,
     TableStyle,
     Paragraph,
     Spacer,
-    KeepTogether,
     HRFlowable,
 )
 from reportlab.graphics.shapes import Drawing, Rect, String, Circle
@@ -47,6 +47,7 @@ C_AMBER_BG    = colors.HexColor("#fffbeb")
 PAGE_W, PAGE_H = A4
 MARGIN = 20 * mm
 CONTENT_W = PAGE_W - 2 * MARGIN
+SECTION_INNER_W = CONTENT_W - 20
 
 # ═══════════════════════════════════════════════════════════════
 # STYLES
@@ -78,16 +79,19 @@ def _build_styles():
         "Cell", parent=ss["Normal"],
         fontName="Helvetica", fontSize=9, leading=12,
         textColor=C_TEXT,
+        wordWrap="CJK",
     )
     styles["cell_bold"] = ParagraphStyle(
         "CellBold", parent=ss["Normal"],
         fontName="Helvetica-Bold", fontSize=9, leading=12,
         textColor=C_TEXT,
+        wordWrap="CJK",
     )
     styles["cell_mono"] = ParagraphStyle(
         "CellMono", parent=ss["Normal"],
         fontName="Courier-Bold", fontSize=9, leading=12,
         textColor=C_TEXT,
+        wordWrap="CJK",
     )
     styles["eye_od"] = ParagraphStyle(
         "EyeOD", parent=ss["Normal"],
@@ -113,11 +117,13 @@ def _build_styles():
         "FieldValue", parent=ss["Normal"],
         fontName="Helvetica-Bold", fontSize=10, leading=13,
         textColor=C_TEXT,
+        wordWrap="CJK",
     )
     styles["field_value_mono"] = ParagraphStyle(
         "FieldValueMono", parent=ss["Normal"],
         fontName="Courier-Bold", fontSize=10, leading=13,
         textColor=C_TEXT,
+        wordWrap="CJK",
     )
     styles["footer"] = ParagraphStyle(
         "Footer", parent=ss["Normal"],
@@ -163,6 +169,7 @@ def _build_styles():
         "ConclusionValue", parent=ss["Normal"],
         fontName="Helvetica", fontSize=9, leading=13,
         textColor=C_TEXT,
+        wordWrap="CJK",
     )
     return styles
 
@@ -234,6 +241,39 @@ def _data_table_style(n_data_rows, n_cols, has_header=True):
     # Inner grid
     cmds.append(("INNERGRID", (0, 0), (-1, -1), 0.25, C_BORDER))
     return cmds
+
+
+def _auto_col_widths(headers, rows, total_width, min_width=44):
+    """Compute adaptive column widths from content length while preserving readability."""
+    col_count = len(headers)
+    weights = []
+
+    for idx in range(col_count):
+        samples = [str(headers[idx] or "")]
+        for row in rows:
+            if idx < len(row):
+                samples.append(str(row[idx] or ""))
+
+        measured = 0
+        for txt in samples:
+            clipped = txt[:80]
+            measured = max(measured, stringWidth(clipped, "Helvetica", 7.5))
+
+        weights.append(max(measured + 18, min_width))
+
+    total = sum(weights) or 1
+    widths = [(w / total) * total_width for w in weights]
+
+    widths = [max(w, min_width) for w in widths]
+    extra = sum(widths) - total_width
+    if extra > 0:
+        shrinkable = [i for i, w in enumerate(widths) if w > min_width]
+        if shrinkable:
+            per = extra / len(shrinkable)
+            for i in shrinkable:
+                widths[i] = max(min_width, widths[i] - per)
+
+    return widths
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -435,7 +475,13 @@ def _build_acuite_section(data, styles):
             _p("", styles["cell"]),
         ],
     ]
-    t = Table(rows, colWidths=[CONTENT_W * 0.35, CONTENT_W * 0.30, CONTENT_W * 0.30])
+    raw_rows = [
+        ["Œil Droit (OD)", _v(av.get("od_sc")), _v(av.get("od_ac"))],
+        ["Œil Gauche (OG)", _v(av.get("og_sc")), _v(av.get("og_ac"))],
+        ["AV Binoculaire", _v(av.get("binoculaire")), ""],
+    ]
+    widths = _auto_col_widths(["", "SANS CORRECTION", "AVEC CORRECTION"], raw_rows, SECTION_INNER_W, min_width=70)
+    t = Table(rows, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle(_data_table_style(3, 3)))
     return _build_section("👁  Acuité Visuelle", "ISO 8596", t, styles)
 
@@ -466,8 +512,12 @@ def _build_refraction_obj_section(data, styles):
             _p(_v(og.get("axe")), styles["cell_mono"]),
         ],
     ]
-    t = Table(rows, colWidths=[CONTENT_W * 0.20, CONTENT_W * 0.25,
-                                CONTENT_W * 0.25, CONTENT_W * 0.25])
+    raw_rows = [
+        ["OD", _v(od.get("sphere")), _v(od.get("cylindre")), _v(od.get("axe"))],
+        ["OG", _v(og.get("sphere")), _v(og.get("cylindre")), _v(og.get("axe"))],
+    ]
+    widths = _auto_col_widths(["", "SPHÈRE", "CYLINDRE", "AXE"], raw_rows, SECTION_INNER_W, min_width=64)
+    t = Table(rows, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle(_data_table_style(2, 4)))
     return _build_section("🔬  Réfraction Objective", "AUTORÉFRACTOMÈTRE", t, styles)
 
@@ -486,9 +536,11 @@ def _build_prescription_section(data, styles):
         _p("PRISME", styles["header_cell"]),
         _p("BASE", styles["header_cell"]),
     ]
-    cw = CONTENT_W
-    widths = [cw * 0.10, cw * 0.15, cw * 0.15, cw * 0.12,
-              cw * 0.16, cw * 0.14, cw * 0.13]
+    raw_rows = [
+        ["OD", _v(od.get("sphere")), _v(od.get("cylindre")), _v(od.get("axe")), _v(od.get("addition")), _v(od.get("prisme")), _v(od.get("base"))],
+        ["OG", _v(og.get("sphere")), _v(og.get("cylindre")), _v(og.get("axe")), _v(og.get("addition")), _v(og.get("prisme")), _v(og.get("base"))],
+    ]
+    widths = _auto_col_widths(["", "SPHÈRE", "CYLINDRE", "AXE", "ADDITION", "PRISME", "BASE"], raw_rows, SECTION_INNER_W, min_width=50)
     rows = [
         header,
         [
@@ -510,7 +562,7 @@ def _build_prescription_section(data, styles):
             _p(_v(og.get("base")), styles["cell"]),
         ],
     ]
-    t = Table(rows, colWidths=widths)
+    t = Table(rows, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle(_data_table_style(2, 7)))
     return _build_section("📋  Réfraction Subjective – Prescription", "ISO 13666", t, styles)
 
@@ -544,8 +596,13 @@ def _build_distances_pio_section(data, styles):
                 pass
         value_row.append(_p(val, st))
 
-    cw = CONTENT_W / 6
-    t = Table([label_row, value_row], colWidths=[cw] * 6)
+    widths = _auto_col_widths(
+        [str(f[0]) for f in fields],
+        [[str(f[1]) for f in fields]],
+        SECTION_INNER_W,
+        min_width=58,
+    )
+    t = Table([label_row, value_row], colWidths=widths)
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), C_CARD_BG),
         ("BOX", (0, 0), (-1, -1), 0.25, C_BORDER),
@@ -585,7 +642,7 @@ def _build_examens_section(data, styles):
             row2_labels.append(lp)
             row2_values.append(vp)
 
-    cw = CONTENT_W / 3
+    cw = SECTION_INNER_W / 3
     t = Table(
         [row1_labels, row1_values, row2_labels, row2_values],
         colWidths=[cw] * 3,
@@ -613,7 +670,7 @@ def _build_diagnostic_section(data, styles):
     diag_box = Table([
         [_p("DIAGNOSTIC", styles["conclusion_label"])],
         [_p(_v(diag), styles["conclusion_value"])],
-    ], colWidths=[CONTENT_W * 0.46])
+    ], colWidths=[SECTION_INNER_W * 0.46])
     diag_box.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), C_CARD_BG),
         ("BOX", (0, 0), (-1, -1), 0.5, C_BORDER),
@@ -627,7 +684,7 @@ def _build_diagnostic_section(data, styles):
     obs_box = Table([
         [_p("OBSERVATIONS", styles["conclusion_label"])],
         [_p(_v(obs), styles["conclusion_value"])],
-    ], colWidths=[CONTENT_W * 0.46])
+    ], colWidths=[SECTION_INNER_W * 0.46])
     obs_box.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), C_CARD_BG),
         ("BOX", (0, 0), (-1, -1), 0.5, C_BORDER),
@@ -657,7 +714,7 @@ def _build_diagnostic_section(data, styles):
     content = Table([
         [diag_box, obs_box],
         ["", stamp],
-    ], colWidths=[CONTENT_W * 0.50, CONTENT_W * 0.50])
+    ], colWidths=[SECTION_INNER_W * 0.50, SECTION_INNER_W * 0.50])
     content.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (-1, -1), (-1, -1), "RIGHT"),
@@ -725,6 +782,7 @@ def _build_footer(data, styles):
 def _draw_page_decoration(canvas, doc):
     """Draw decorative left band on each page."""
     canvas.saveState()
+    page_num = canvas.getPageNumber()
     # Gradient-like left band (3 segments)
     band_w = 4
     h3 = PAGE_H / 3
@@ -734,6 +792,29 @@ def _draw_page_decoration(canvas, doc):
     canvas.rect(0, h3, band_w, h3, fill=1, stroke=0)
     canvas.setFillColor(colors.HexColor("#93c5fd"))
     canvas.rect(0, 0, band_w, h3, fill=1, stroke=0)
+
+    # Top separator for continuation pages
+    if page_num > 1:
+        canvas.setStrokeColor(colors.HexColor("#cbd5e1"))
+        canvas.setLineWidth(0.8)
+        canvas.line(MARGIN, PAGE_H - 14 * mm, PAGE_W - MARGIN, PAGE_H - 14 * mm)
+        canvas.setFillColor(colors.HexColor("#1e40af"))
+        canvas.setFont("Helvetica-Bold", 8)
+        canvas.drawString(MARGIN, PAGE_H - 11.5 * mm, "SUITE DU RAPPORT")
+
+    # Bottom page separator + marker
+    canvas.setStrokeColor(colors.HexColor("#e2e8f0"))
+    canvas.setLineWidth(0.6)
+    canvas.line(MARGIN, 12 * mm, PAGE_W - MARGIN, 12 * mm)
+    marker_w = 26 * mm
+    marker_h = 7 * mm
+    marker_x = PAGE_W - MARGIN - marker_w
+    marker_y = 8 * mm
+    canvas.setFillColor(colors.HexColor("#f8fafc"))
+    canvas.roundRect(marker_x, marker_y, marker_w, marker_h, 2.5, fill=1, stroke=0)
+    canvas.setFillColor(colors.HexColor("#475569"))
+    canvas.setFont("Helvetica", 7.5)
+    canvas.drawCentredString(marker_x + marker_w / 2, marker_y + 2.2, f"Page {page_num}")
     canvas.restoreState()
 
 
@@ -777,22 +858,22 @@ def generate_bilan_pdf(data: dict, output_path: str) -> str:
     elements.append(Spacer(1, 5 * mm))
 
     # Sections
-    elements.append(KeepTogether(_build_acuite_section(data, styles)))
+    elements.append(_build_acuite_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
 
-    elements.append(KeepTogether(_build_refraction_obj_section(data, styles)))
+    elements.append(_build_refraction_obj_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
 
-    elements.append(KeepTogether(_build_prescription_section(data, styles)))
+    elements.append(_build_prescription_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
 
-    elements.append(KeepTogether(_build_distances_pio_section(data, styles)))
+    elements.append(_build_distances_pio_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
 
-    elements.append(KeepTogether(_build_examens_section(data, styles)))
+    elements.append(_build_examens_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
 
-    elements.append(KeepTogether(_build_diagnostic_section(data, styles)))
+    elements.append(_build_diagnostic_section(data, styles))
     elements.append(Spacer(1, 6 * mm))
 
     # Footer
@@ -834,17 +915,17 @@ def generate_bilan_pdf_bytes(data: dict) -> bytes:
     ))
     elements.append(_build_patient_card(data, styles))
     elements.append(Spacer(1, 5 * mm))
-    elements.append(KeepTogether(_build_acuite_section(data, styles)))
+    elements.append(_build_acuite_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(KeepTogether(_build_refraction_obj_section(data, styles)))
+    elements.append(_build_refraction_obj_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(KeepTogether(_build_prescription_section(data, styles)))
+    elements.append(_build_prescription_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(KeepTogether(_build_distances_pio_section(data, styles)))
+    elements.append(_build_distances_pio_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(KeepTogether(_build_examens_section(data, styles)))
+    elements.append(_build_examens_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(KeepTogether(_build_diagnostic_section(data, styles)))
+    elements.append(_build_diagnostic_section(data, styles))
     elements.append(Spacer(1, 6 * mm))
     elements.append(_build_footer(data, styles))
 

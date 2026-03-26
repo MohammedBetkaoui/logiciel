@@ -644,7 +644,10 @@ async def list_bilans(
 async def get_bilan(examen_id: int):
     """Récupère un bilan complet avec analyse clinique."""
     row = db_conn.execute(
-        """SELECT e.*, p.nom, p.prenom, p.date_naissance, p.sexe
+        """SELECT e.*, p.nom, p.prenom, p.date_naissance, p.sexe,
+                  p.adresse, p.code_postal, p.ville, p.telephone, p.email,
+                  p.numero_securite_sociale, p.mutuelle, p.numero_adherent,
+                  p.consentement_rgpd
            FROM examens e
            JOIN patients p ON e.patient_id = p.patient_id
            WHERE e.examen_id = ?""",
@@ -690,7 +693,10 @@ async def get_bilan(examen_id: int):
 async def export_bilan_pdf(examen_id: int):
     """Génère et retourne le PDF du bilan optométrique."""
     row = db_conn.execute(
-        """SELECT e.*, p.nom, p.prenom, p.date_naissance, p.sexe
+        """SELECT e.*, p.nom, p.prenom, p.date_naissance, p.sexe,
+                  p.adresse, p.code_postal, p.ville, p.telephone, p.email,
+                  p.numero_securite_sociale, p.mutuelle, p.numero_adherent,
+                  p.consentement_rgpd
            FROM examens e
            JOIN patients p ON e.patient_id = p.patient_id
            WHERE e.examen_id = ?""",

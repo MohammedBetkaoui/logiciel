@@ -12,18 +12,114 @@ import {
 const PAGE_SIZE = 15;
 
 const AMETROPIE_OPTIONS = [
-  'Myopie', 'Hypermetropie', 'Astigmatisme', 'Presbytie', 'Anisometropie',
+  'Myopie',
+  'Hypermétropie',
+  'Astigmatisme',
 ];
-const ANOMALIES_OPTIONS = [
-  'Strabisme', 'Amblyopie', 'Nystagmus', 'Daltonisme', 'Ptosis',
-  'Cataracte', 'Glaucome', 'Keratocone', 'Aucune',
+const ANOMALIES_GROUPS = [
+  {
+    title: "Problèmes d'accommodation",
+    options: [
+      "Insuffisance d'accommodation",
+      "Excès d'accommodation",
+      'Fatigue accommodative',
+      'Spasme accommodatif',
+      'Inertie accommodative',
+      'Paralysie accommodative',
+    ],
+  },
+  {
+    title: 'Problèmes de convergence',
+    options: [
+      'Insuffisance de convergence',
+      'Pseudo-insuffisance de convergence',
+      'Excès de convergence',
+      'Insuffisance de convergence pure',
+    ],
+  },
+  {
+    title: 'Ésophorie',
+    options: [
+      'Ésophorie basique',
+      'Insuffisance de divergence',
+      'Excès de convergence',
+    ],
+  },
+  {
+    title: 'Exophorie',
+    options: [
+      'Exophorie basique',
+      'Excès de divergence',
+      'Insuffisance de convergence',
+    ],
+  },
+  {
+    title: 'Autres',
+    options: [
+      'Phorie verticale hyper D/G',
+      'Phorie verticale hyper G/D',
+      'Paralysie oculomotrice',
+      'Dysfonctionnement vergentiel',
+      'Réserves fusionnelles réduites',
+      "Pas d'anomalie",
+    ],
+  },
 ];
+const ANOMALIES_OPTIONS = [...new Set(ANOMALIES_GROUPS.flatMap((group) => group.options))];
 const ACUITE_VISUELLE_OPTIONS = [
-  'PL- (Pas de perception)', 'PL+ (Perception lumineuse)',
-  'VBLM (Voit bouger la main)', 'CLD (Compte les doigts)',
   '<1/10', '1/10', '2/10', '3/10', '4/10', '5/10',
   '6/10', '7/10', '8/10', '9/10', '10/10',
 ];
+
+const normalizeLabel = (value = '') =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const AMETROPIE_ALIASES = {
+  myopie: 'Myopie',
+  hypermetropie: 'Hypermétropie',
+  astigmatisme: 'Astigmatisme',
+};
+
+const ANOMALIE_ALIASES = {
+  "insuffisance d'accommodation": "Insuffisance d'accommodation",
+  "exces d'accommodation": "Excès d'accommodation",
+  'fatigue accommodative': 'Fatigue accommodative',
+  'spasme accommodatif': 'Spasme accommodatif',
+  'inertie accommodative': 'Inertie accommodative',
+  'paralysie accommodative': 'Paralysie accommodative',
+  'insuffisance de convergence': 'Insuffisance de convergence',
+  'pseudo-insuffisance de convergence': 'Pseudo-insuffisance de convergence',
+  'exces de convergence': 'Excès de convergence',
+  'insuffisance de convergence pure': 'Insuffisance de convergence pure',
+  'esophorie basique': 'Ésophorie basique',
+  'insuffisance de divergence': 'Insuffisance de divergence',
+  'exophorie basique': 'Exophorie basique',
+  'exces de divergence': 'Excès de divergence',
+  'phorie verticale': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper d/g': 'Phorie verticale hyper D/G',
+  'phorie verticale hyper g/d': 'Phorie verticale hyper G/D',
+  'paralysie oculomotrice': 'Paralysie oculomotrice',
+  'dysfonctionnement vergentiel': 'Dysfonctionnement vergentiel',
+  'reserves fusionnelles reduites': 'Réserves fusionnelles réduites',
+  "pas d'anomalie": "Pas d'anomalie",
+  aucune: "Pas d'anomalie",
+};
+
+function parseCanonicalList(rawValue, aliases, allowed) {
+  if (!rawValue) return [];
+  const list = rawValue
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => aliases[normalizeLabel(item)] || item)
+    .filter((item) => allowed.includes(item));
+  return [...new Set(list)];
+}
 
 const inputCls =
   'w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all';
@@ -33,6 +129,47 @@ function formatDate(dateStr) {
   try {
     return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   } catch { return dateStr; }
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return String(dateStr);
+  }
+}
+
+function toDisplayLabel(key) {
+  const labels = {
+    bilan_simple_id: 'ID Bilan',
+    date_creation: 'Date création',
+    age: 'Âge',
+    sexe: 'Sexe',
+    ametropie: 'Amétropie',
+    anomalies: 'Anomalies',
+    acuite_visuelle: 'Acuité visuelle',
+    statut_refractif: 'Statut réfractif',
+  };
+
+  if (labels[key]) return labels[key];
+  return key
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function toDisplayValue(key, value) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (key === 'date_creation') return formatDateTime(value);
+  return String(value);
 }
 
 export default function BilanSimpleList({ onEditBilan }) {
@@ -80,10 +217,9 @@ export default function BilanSimpleList({ onEditBilan }) {
     setEditForm({
       age: bilan.age ?? '',
       sexe: bilan.sexe ?? '',
-      ametropie: bilan.ametropie ? bilan.ametropie.split(',').map((s) => s.trim()).filter(Boolean) : [],
-      anomalies: bilan.anomalies ? bilan.anomalies.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      ametropie: parseCanonicalList(bilan.ametropie, AMETROPIE_ALIASES, AMETROPIE_OPTIONS),
+      anomalies: parseCanonicalList(bilan.anomalies, ANOMALIE_ALIASES, ANOMALIES_OPTIONS),
       acuite_visuelle: bilan.acuite_visuelle ?? '',
-      statut_refractif: bilan.statut_refractif ?? '',
     });
     setEditError('');
     setEditBilan(bilan);
@@ -103,10 +239,10 @@ export default function BilanSimpleList({ onEditBilan }) {
   const toggleEditAnomalie = (item) => {
     setEditForm((f) => {
       let updated;
-      if (item === 'Aucune') {
-        updated = f.anomalies.includes('Aucune') ? [] : ['Aucune'];
+      if (item === "Pas d'anomalie") {
+        updated = f.anomalies.includes("Pas d'anomalie") ? [] : ["Pas d'anomalie"];
       } else {
-        const without = f.anomalies.filter((a) => a !== 'Aucune');
+        const without = f.anomalies.filter((a) => a !== "Pas d'anomalie");
         updated = without.includes(item) ? without.filter((a) => a !== item) : [...without, item];
       }
       return { ...f, anomalies: updated };
@@ -114,8 +250,8 @@ export default function BilanSimpleList({ onEditBilan }) {
   };
 
   const handleEditSave = async () => {
-    if (!editForm.age || !editForm.sexe || editForm.ametropie.length === 0 || !editForm.statut_refractif) {
-      setEditError('Âge, sexe, amétropie et statut réfractif sont requis.');
+    if (!editForm.age || !editForm.sexe || editForm.ametropie.length === 0 || editForm.anomalies.length === 0 || !editForm.acuite_visuelle) {
+      setEditError('Âge, sexe, amétropie, anomalies et acuité visuelle sont requis.');
       return;
     }
     setEditSaving(true);
@@ -127,7 +263,7 @@ export default function BilanSimpleList({ onEditBilan }) {
         ametropie: editForm.ametropie.join(', '),
         anomalies: editForm.anomalies.join(', '),
         acuite_visuelle: editForm.acuite_visuelle,
-        statut_refractif: editForm.statut_refractif,
+        statut_refractif: editForm.ametropie.length > 0 ? 'Non emmetrope' : 'Emmetrope',
       };
       const res = await fetch(`http://localhost:8000/api/bilans-simples/${editBilan.bilan_simple_id}`, {
         method: 'PUT',
@@ -206,12 +342,13 @@ export default function BilanSimpleList({ onEditBilan }) {
   };
 
   const columns = [
+    { key: 'bilan_simple_id', label: 'ID' },
     { key: 'date_creation', label: 'Date' },
     { key: 'age', label: 'Âge' },
     { key: 'sexe', label: 'Sexe' },
     { key: 'ametropie', label: 'Amétropie' },
+    { key: 'anomalies', label: 'Anomalies' },
     { key: 'acuite_visuelle', label: 'Acuité' },
-    { key: 'statut_refractif', label: 'Statut' },
   ];
 
   // ─── Detail row helper ─────────────────────────────────
@@ -372,6 +509,9 @@ export default function BilanSimpleList({ onEditBilan }) {
                             : 'hover:bg-blue-50/40 dark:hover:bg-blue-900/10'
                         }`}
                       >
+                        <td className="px-4 py-3 whitespace-nowrap text-neutral-600 dark:text-neutral-300 font-mono">
+                          #{b.bilan_simple_id}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap text-neutral-600 dark:text-neutral-300">
                           {formatDate(b.date_creation)}
                         </td>
@@ -390,17 +530,18 @@ export default function BilanSimpleList({ onEditBilan }) {
                             ))}
                           </div>
                         </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {(b.anomalies || '').split(',').filter(Boolean).map((a, i) => (
+                              <span key={i} className="inline-block px-1.5 py-0.5 text-[11px] font-medium rounded bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                {a.trim()}
+                              </span>
+                            ))}
+                            {!b.anomalies && <span className="text-neutral-400 text-xs">—</span>}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap font-medium text-neutral-800 dark:text-neutral-100">
                           {b.acuite_visuelle || '—'}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                            b.statut_refractif === 'Emmetrope'
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                              : 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                          }`}>
-                            {b.statut_refractif}
-                          </span>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -476,7 +617,7 @@ export default function BilanSimpleList({ onEditBilan }) {
         {selectedBilan && (
           <div className="w-80 shrink-0 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden self-start sticky top-4">
             {/* Panel header */}
-            <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+            <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-700 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
               <div className="flex items-center justify-between mb-2">
                 <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                   <Eye size={18} className="text-blue-600 dark:text-blue-400" />
@@ -495,21 +636,16 @@ export default function BilanSimpleList({ onEditBilan }) {
 
             {/* Panel body */}
             <div className="px-5 py-4 space-y-1 max-h-[calc(100vh-220px)] overflow-y-auto">
+              <DetailRow label="ID Bilan">
+                <span className="font-mono">{selectedBilan.bilan_simple_id}</span>
+              </DetailRow>
+              <DetailRow label="Date de création">{formatDateTime(selectedBilan.date_creation)}</DetailRow>
               <DetailRow label="Âge">{selectedBilan.age} ans</DetailRow>
               <DetailRow label="Sexe">{selectedBilan.sexe}</DetailRow>
               <DetailRow label="Amétropie"><BadgeList text={selectedBilan.ametropie} color="blue" /></DetailRow>
               <DetailRow label="Anomalies"><BadgeList text={selectedBilan.anomalies} color="amber" /></DetailRow>
               <DetailRow label="Acuité Visuelle">
                 <span className="font-medium">{selectedBilan.acuite_visuelle || '—'}</span>
-              </DetailRow>
-              <DetailRow label="Statut Réfractif">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                  selectedBilan.statut_refractif === 'Emmetrope'
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                }`}>
-                  {selectedBilan.statut_refractif}
-                </span>
               </DetailRow>
             </div>
 
@@ -597,40 +733,47 @@ export default function BilanSimpleList({ onEditBilan }) {
 
               {/* Anomalies */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Anomalies</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {ANOMALIES_OPTIONS.map((item) => {
-                    const sel = editForm.anomalies?.includes(item);
-                    return (
-                      <button key={item} type="button" onClick={() => toggleEditAnomalie(item)}
-                        className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                          sel
-                            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 font-medium'
-                            : 'bg-white dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300'
-                        }`}
-                      >
-                        {sel ? '✓ ' : ''}{item}
-                      </button>
-                    );
-                  })}
+                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Anomalies <span className="text-red-400">*</span></label>
+                <div className="space-y-2">
+                  {ANOMALIES_GROUPS.map((group) => (
+                    <div
+                      key={group.title}
+                      className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-800/30 p-2.5"
+                    >
+                      <p className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 mb-2">
+                        {group.title}
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                        {group.options.map((item) => {
+                          const sel = editForm.anomalies?.includes(item);
+                          return (
+                            <button
+                              key={`${group.title}-${item}`}
+                              type="button"
+                              onClick={() => toggleEditAnomalie(item)}
+                              className={`px-2.5 py-1 text-xs rounded-lg border transition-all text-left ${
+                                sel
+                                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 font-medium'
+                                  : 'bg-white dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300'
+                              }`}
+                            >
+                              {sel ? '✓ ' : ''}{item}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Acuité + Statut */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Acuité Visuelle</label>
                   <select className={inputCls} value={editForm.acuite_visuelle} onChange={(e) => handleEditChange('acuite_visuelle', e.target.value)}>
                     <option value="">—</option>
                     {ACUITE_VISUELLE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Statut Réfractif <span className="text-red-400">*</span></label>
-                  <select className={inputCls} value={editForm.statut_refractif} onChange={(e) => handleEditChange('statut_refractif', e.target.value)}>
-                    <option value="">—</option>
-                    <option value="Emmetrope">Emmétrope</option>
-                    <option value="Non emmetrope">Non emmétrope</option>
                   </select>
                 </div>
               </div>
