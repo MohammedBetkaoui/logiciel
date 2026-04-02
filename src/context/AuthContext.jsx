@@ -115,8 +115,17 @@ export function AuthProvider({ children }) {
     return { success: true };
   }, []);
 
+  const verifyPassword = useCallback(async (password) => {
+    const storedHash = localStorage.getItem('bbadata-password-hash');
+    if (!storedHash) {
+      return password === 'admin';
+    }
+    const inputHash = await hashPassword(password);
+    return inputHash === storedHash;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, username, login, logout, changePassword, changeUsername, lastActivity }}>
+    <AuthContext.Provider value={{ isAuthenticated, username, login, logout, changePassword, changeUsername, verifyPassword, lastActivity }}>
       {children}
     </AuthContext.Provider>
   );

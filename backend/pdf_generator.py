@@ -687,6 +687,47 @@ def _build_examens_section(data, styles):
     return _build_section("VISION BINOCULAIRE & EXAMENS COMPLEMENTAIRES", "", t, styles)
 
 
+def _humanize_extra_key(key: str) -> str:
+    aliases = {
+        "motif_consultation": "Motif consultation",
+        "dernier_examen_ophtalmo": "Dernier examen ophtalmologique",
+        "harmon_cm": "Harmon (cm)",
+        "revip_cm": "Revip (cm)",
+        "ppc_pb_cm": "PPC P.B (cm)",
+        "ppc_pr_cm": "PPC P.R (cm)",
+        "aca_calcule": "AC/A calcule",
+        "aca_gradient": "AC/A gradient",
+    }
+    if key in aliases:
+        return aliases[key]
+    return key.replace("_", " ").strip().capitalize()
+
+
+def _build_complementaires_section(data, styles):
+    """Section: Donnees complementaires du bilan etendu."""
+    extras = data.get("donnees_complementaires", {}) or {}
+    if not extras:
+        return None
+
+    header = [_p("CHAMP", styles["header_cell"]), _p("VALEUR", styles["header_cell"])]
+    rows = [header]
+    raw_rows = []
+
+    for key, value in extras.items():
+        label = _humanize_extra_key(str(key))
+        display = _v(value)
+        raw_rows.append([label, display])
+        rows.append([
+            _p(label, styles["cell_bold"]),
+            _p(display, styles["cell"]),
+        ])
+
+    widths = _auto_col_widths(["CHAMP", "VALEUR"], raw_rows, SECTION_INNER_W, min_width=130)
+    t = Table(rows, colWidths=widths, repeatRows=1)
+    t.setStyle(TableStyle(_data_table_style(len(raw_rows), 2)))
+    return _build_section("DONNEES COMPLEMENTAIRES DU BILAN", "", t, styles)
+
+
 def _build_diagnostic_section(data, styles):
     """Section 6: Diagnostic & Conclusion."""
     diag = data.get("diagnostic", "—")
@@ -881,6 +922,11 @@ def generate_bilan_pdf(data: dict, output_path: str) -> str:
     elements.append(_build_examens_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
 
+    complements = _build_complementaires_section(data, styles)
+    if complements:
+        elements.append(complements)
+        elements.append(Spacer(1, 4 * mm))
+
     elements.append(_build_diagnostic_section(data, styles))
     elements.append(Spacer(1, 6 * mm))
 
@@ -933,6 +979,12 @@ def generate_bilan_pdf_bytes(data: dict) -> bytes:
     elements.append(Spacer(1, 4 * mm))
     elements.append(_build_examens_section(data, styles))
     elements.append(Spacer(1, 4 * mm))
+
+    complements = _build_complementaires_section(data, styles)
+    if complements:
+        elements.append(complements)
+        elements.append(Spacer(1, 4 * mm))
+
     elements.append(_build_diagnostic_section(data, styles))
     elements.append(Spacer(1, 6 * mm))
     elements.append(_build_footer(data, styles))

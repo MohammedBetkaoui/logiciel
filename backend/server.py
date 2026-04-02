@@ -13,7 +13,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from database import init_database, log_audit, compute_record_hash
 from clinical_engine import (
@@ -106,8 +106,11 @@ class PatientCreate(BaseModel):
 
 
 class ExamenCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     patient_id: int
     praticien: str
+    date_examen: Optional[str] = None
     av_od_sc: Optional[float] = None
     av_og_sc: Optional[float] = None
     av_od_ac: Optional[float] = None
@@ -160,6 +163,13 @@ class BilanSimpleCreate(BaseModel):
     statut_refractif: str = Field(pattern=r"^(Emmetrope|Non emmetrope)$")
 
 
+def _get_examens_writable_columns(conn: sqlite3.Connection):
+    """Liste des colonnes modifiables de la table examens."""
+    blocked = {"examen_id", "date_creation", "date_modification"}
+    rows = conn.execute("PRAGMA table_info(examens)").fetchall()
+    return [r["name"] for r in rows if r["name"] not in blocked]
+
+
 # ═══════════════════════════════════════════════════════════════
 # ROUTES – SANTÉ
 # ═══════════════════════════════════════════════════════════════
@@ -200,6 +210,24 @@ async def list_patients(
 
     rows = db_conn.execute(query, params).fetchall()
     return [dict(r) for r in rows]
+
+
+@app.delete("/api/patients")
+async def delete_all_patients():
+    """Supprime tous les patients et tous leurs examens associés."""
+    patients_count = db_conn.execute("SELECT COUNT(*) AS c FROM patients").fetchone()["c"]
+    examens_count = db_conn.execute("SELECT COUNT(*) AS c FROM examens").fetchone()["c"]
+
+    db_conn.execute("DELETE FROM examens")
+    db_conn.execute("DELETE FROM patients")
+    db_conn.commit()
+
+    log_audit(db_conn, "system", "DELETE_ALL", "patients", 0)
+    return {
+        "status": "deleted_all",
+        "patients_deleted": patients_count,
+        "examens_deleted": examens_count,
+    }
 
 
 @app.get("/api/patients/{patient_id}")
@@ -346,41 +374,21 @@ async def create_examen(examen: ExamenCreate):
         alerte_text = " | ".join(a.message for a in analyse.alertes)
         niveau_urgence = analyse.risque_global
 
-    # Insérer l'examen
+    # Insérer l'examen (inclut tous les champs étendus connus par le schéma)
     data = examen.model_dump()
+    data["date_examen"] = data.get("date_examen") or datetime.now().isoformat()
     data["alerte_clinique"] = alerte_text
     data["niveau_urgence"] = niveau_urgence
     data["signature_hash"] = compute_record_hash(data)
 
+    writable_columns = _get_examens_writable_columns(db_conn)
+    payload = {col: data.get(col) for col in writable_columns if col in data}
+
+    columns = list(payload.keys())
+    placeholders = ",".join("?" for _ in columns)
     cursor = db_conn.execute(
-        """INSERT INTO examens (
-            patient_id, praticien,
-            av_od_sc, av_og_sc, av_od_ac, av_og_ac, av_binoculaire,
-            auto_od_sphere, auto_od_cylindre, auto_od_axe,
-            auto_og_sphere, auto_og_cylindre, auto_og_axe,
-            rx_od_sphere, rx_od_cylindre, rx_od_axe, rx_od_addition, rx_od_prisme, rx_od_base_prisme,
-            rx_og_sphere, rx_og_cylindre, rx_og_axe, rx_og_addition, rx_og_prisme, rx_og_base_prisme,
-            dp_od, dp_og, dp_binoculaire,
-            pio_od, pio_og, methode_pio,
-            motilite_oculaire, cover_test, test_couleurs, fond_oeil, biomicroscopie, champ_visuel,
-            diagnostic, observations, alerte_clinique, niveau_urgence, signature_hash
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-        (
-            data["patient_id"], data["praticien"],
-            data["av_od_sc"], data["av_og_sc"], data["av_od_ac"], data["av_og_ac"], data["av_binoculaire"],
-            data["auto_od_sphere"], data["auto_od_cylindre"], data["auto_od_axe"],
-            data["auto_og_sphere"], data["auto_og_cylindre"], data["auto_og_axe"],
-            data["rx_od_sphere"], data["rx_od_cylindre"], data["rx_od_axe"],
-            data["rx_od_addition"], data["rx_od_prisme"], data["rx_od_base_prisme"],
-            data["rx_og_sphere"], data["rx_og_cylindre"], data["rx_og_axe"],
-            data["rx_og_addition"], data["rx_og_prisme"], data["rx_og_base_prisme"],
-            data["dp_od"], data["dp_og"], data["dp_binoculaire"],
-            data["pio_od"], data["pio_og"], data["methode_pio"],
-            data["motilite_oculaire"], data["cover_test"], data["test_couleurs"],
-            data["fond_oeil"], data["biomicroscopie"], data["champ_visuel"],
-            data["diagnostic"], data["observations"],
-            data["alerte_clinique"], data["niveau_urgence"], data["signature_hash"],
-        ),
+        f"INSERT INTO examens ({', '.join(columns)}) VALUES ({placeholders})",
+        tuple(payload[c] for c in columns),
     )
     db_conn.commit()
     examen_id = cursor.lastrowid
@@ -640,6 +648,17 @@ async def list_bilans(
     return [dict(r) for r in rows]
 
 
+@app.delete("/api/bilans")
+async def delete_all_bilans():
+    """Supprime tous les bilans optométriques."""
+    bilans_count = db_conn.execute("SELECT COUNT(*) AS c FROM examens").fetchone()["c"]
+    db_conn.execute("DELETE FROM examens")
+    db_conn.commit()
+
+    log_audit(db_conn, "system", "DELETE_ALL", "examens", 0)
+    return {"status": "deleted_all", "bilans_deleted": bilans_count}
+
+
 @app.get("/api/bilans/{examen_id}")
 async def get_bilan(examen_id: int):
     """Récupère un bilan complet avec analyse clinique."""
@@ -792,6 +811,24 @@ async def export_bilan_pdf(examen_id: int):
         "sha256": b.get("signature_hash", "N/A"),
     }
 
+    already_mapped = {
+        "examen_id", "patient_id", "date_examen", "praticien", "niveau_urgence", "signature_hash",
+        "nom", "prenom", "date_naissance", "sexe", "adresse", "code_postal", "ville", "telephone",
+        "email", "numero_securite_sociale", "mutuelle", "numero_adherent", "consentement_rgpd",
+        "av_od_sc", "av_od_ac", "av_og_sc", "av_og_ac", "av_binoculaire",
+        "auto_od_sphere", "auto_od_cylindre", "auto_od_axe", "auto_og_sphere", "auto_og_cylindre", "auto_og_axe",
+        "rx_od_sphere", "rx_od_cylindre", "rx_od_axe", "rx_od_addition", "rx_od_prisme", "rx_od_base_prisme",
+        "rx_og_sphere", "rx_og_cylindre", "rx_og_axe", "rx_og_addition", "rx_og_prisme", "rx_og_base_prisme",
+        "dp_od", "dp_og", "dp_binoculaire", "pio_od", "pio_og", "methode_pio",
+        "motilite_oculaire", "cover_test", "test_couleurs", "fond_oeil", "biomicroscopie", "champ_visuel",
+        "diagnostic", "observations", "alerte_clinique", "date_creation", "date_modification",
+    }
+    pdf_data["donnees_complementaires"] = {
+        key: b.get(key)
+        for key in sorted(b.keys())
+        if key not in already_mapped
+    }
+
     pdf_bytes = generate_bilan_pdf_bytes(pdf_data)
     filename = f"bilan_{examen_id}_{b.get('nom', '')}_{b.get('prenom', '')}.pdf"
 
@@ -881,36 +918,13 @@ async def update_bilan(examen_id: int, examen: ExamenCreate):
     data["niveau_urgence"] = niveau_urgence
     data["signature_hash"] = compute_record_hash(data)
 
+    writable_columns = set(_get_examens_writable_columns(db_conn))
+    update_columns = [key for key in data.keys() if key in writable_columns]
+    set_clause = ", ".join(f"{col}=?" for col in update_columns)
+
     db_conn.execute(
-        """UPDATE examens SET
-            patient_id=?, praticien=?,
-            av_od_sc=?, av_og_sc=?, av_od_ac=?, av_og_ac=?, av_binoculaire=?,
-            auto_od_sphere=?, auto_od_cylindre=?, auto_od_axe=?,
-            auto_og_sphere=?, auto_og_cylindre=?, auto_og_axe=?,
-            rx_od_sphere=?, rx_od_cylindre=?, rx_od_axe=?, rx_od_addition=?, rx_od_prisme=?, rx_od_base_prisme=?,
-            rx_og_sphere=?, rx_og_cylindre=?, rx_og_axe=?, rx_og_addition=?, rx_og_prisme=?, rx_og_base_prisme=?,
-            dp_od=?, dp_og=?, dp_binoculaire=?,
-            pio_od=?, pio_og=?, methode_pio=?,
-            motilite_oculaire=?, cover_test=?, test_couleurs=?, fond_oeil=?, biomicroscopie=?, champ_visuel=?,
-            diagnostic=?, observations=?, alerte_clinique=?, niveau_urgence=?, signature_hash=?
-        WHERE examen_id=?""",
-        (
-            data["patient_id"], data["praticien"],
-            data["av_od_sc"], data["av_og_sc"], data["av_od_ac"], data["av_og_ac"], data["av_binoculaire"],
-            data["auto_od_sphere"], data["auto_od_cylindre"], data["auto_od_axe"],
-            data["auto_og_sphere"], data["auto_og_cylindre"], data["auto_og_axe"],
-            data["rx_od_sphere"], data["rx_od_cylindre"], data["rx_od_axe"],
-            data["rx_od_addition"], data["rx_od_prisme"], data["rx_od_base_prisme"],
-            data["rx_og_sphere"], data["rx_og_cylindre"], data["rx_og_axe"],
-            data["rx_og_addition"], data["rx_og_prisme"], data["rx_og_base_prisme"],
-            data["dp_od"], data["dp_og"], data["dp_binoculaire"],
-            data["pio_od"], data["pio_og"], data["methode_pio"],
-            data["motilite_oculaire"], data["cover_test"], data["test_couleurs"],
-            data["fond_oeil"], data["biomicroscopie"], data["champ_visuel"],
-            data["diagnostic"], data["observations"],
-            data["alerte_clinique"], data["niveau_urgence"], data["signature_hash"],
-            examen_id,
-        ),
+        f"UPDATE examens SET {set_clause}, date_modification=datetime('now') WHERE examen_id=?",
+        tuple(data[col] for col in update_columns) + (examen_id,),
     )
     db_conn.commit()
     log_audit(db_conn, data["praticien"], "UPDATE", "examens", examen_id)
@@ -955,6 +969,17 @@ async def list_bilans_simples(
         (limit, offset),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+@app.delete("/api/bilans-simples")
+async def delete_all_bilans_simples():
+    """Supprime tous les bilans simplifiés."""
+    bilans_count = db_conn.execute("SELECT COUNT(*) AS c FROM bilans_simples").fetchone()["c"]
+    db_conn.execute("DELETE FROM bilans_simples")
+    db_conn.commit()
+
+    log_audit(db_conn, "system", "DELETE_ALL", "bilans_simples", 0)
+    return {"status": "deleted_all", "bilans_deleted": bilans_count}
 
 
 @app.post("/api/bilans-simples")

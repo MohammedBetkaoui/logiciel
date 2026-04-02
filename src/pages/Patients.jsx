@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import PatientForm from '../components/medical/PatientForm';
+import PasswordConfirmModal from '../components/ui/PasswordConfirmModal';
+import { useAuth } from '../context/AuthContext';
 
 const PAGE_SIZE = 15;
 
@@ -30,6 +32,7 @@ function formatSexe(s) {
 }
 
 export default function Patients() {
+  const { verifyPassword } = useAuth();
   const [view, setView] = useState('list');
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +42,8 @@ export default function Patients() {
   const [filterRgpd, setFilterRgpd] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [editPatient, setEditPatient] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -66,6 +71,62 @@ export default function Patients() {
         if (selectedPatient?.patient_id === patientId) setSelectedPatient(null);
       }
     } catch { /* error */ }
+  };
+
+  const handleDeleteAllPatients = async (password) => {
+    if (!password?.trim()) {
+      return { success: false, error: 'Veuillez saisir votre mot de passe.' };
+    }
+
+    const isPasswordValid = await verifyPassword(password);
+    if (!isPasswordValid) {
+      return { success: false, error: 'Mot de passe incorrect.' };
+    }
+
+    setBulkDeleting(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/patients', { method: 'DELETE' });
+      if (!res.ok) {
+        if (res.status === 404 || res.status === 405) {
+          const ids = data
+            .map((p) => p.patient_id)
+            .filter((id) => id !== null && id !== undefined);
+
+          let failed = 0;
+          for (const patientId of ids) {
+            try {
+              const delRes = await fetch(`http://localhost:8000/api/patients/${patientId}`, {
+                method: 'DELETE',
+              });
+              if (!delRes.ok) failed += 1;
+            } catch {
+              failed += 1;
+            }
+          }
+
+          if (failed > 0) {
+            return {
+              success: false,
+              error: `Suppression partielle: ${failed} patient(s) n'ont pas pu etre supprime(s).`,
+            };
+          }
+        } else {
+          const err = await res.json().catch(() => ({}));
+          return { success: false, error: err.detail || 'Erreur lors de la suppression globale.' };
+        }
+      }
+
+      setDeleteConfirm(null);
+      setSelectedPatient(null);
+      setPage(0);
+      await loadPatients();
+      setDeleteAllOpen(false);
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Impossible de contacter le serveur.' };
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const openEdit = (patient) => {
@@ -153,7 +214,7 @@ export default function Patients() {
       {Icon && <Icon size={14} className="text-neutral-400 mt-0.5 shrink-0" />}
       <div className="min-w-0">
         <p className="text-[11px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">{label}</p>
-        <p className="text-sm text-neutral-800 dark:text-neutral-100 break-words">{value || '—'}</p>
+        <p className="text-sm text-neutral-800 dark:text-neutral-100 wrap-break-word">{value || '—'}</p>
       </div>
     </div>
   );
@@ -181,6 +242,16 @@ export default function Patients() {
           </Button>
         </div>
       </div>
+
+      <PasswordConfirmModal
+        isOpen={deleteAllOpen}
+        title="Supprimer tous les patients"
+        description={`Cette action supprimera définitivement ${data.length} patient(s) et leurs bilans associés.`}
+        confirmLabel="Supprimer tout"
+        isLoading={bulkDeleting}
+        onClose={() => setDeleteAllOpen(false)}
+        onConfirm={handleDeleteAllPatients}
+      />
 
       {/* ─── Content ──────────────────────────────────────── */}
       {view === 'form' ? (
@@ -210,6 +281,13 @@ export default function Patients() {
                 }`}
               >
                 <Filter size={13} /> Filtres{activeFilterCount > 0 && ` (${activeFilterCount})`}
+              </button>
+              <button
+                onClick={() => setDeleteAllOpen(true)}
+                disabled={data.length === 0 || bulkDeleting}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border bg-red-50 border-red-200 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={13} /> Supprimer tout
               </button>
               <Button variant="ghost" icon={RefreshCw} onClick={loadPatients} isLoading={isLoading} size="sm">
                 Rafraîchir
@@ -390,7 +468,7 @@ export default function Patients() {
           {selectedPatient && (
             <div className="w-80 shrink-0 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden self-start sticky top-4">
               {/* Panel header */}
-              <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+              <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-700 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
                 <div className="flex items-center justify-between mb-2">
                   <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                     <User size={18} className="text-blue-600 dark:text-blue-400" />

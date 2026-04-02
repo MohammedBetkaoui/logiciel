@@ -18,22 +18,147 @@ import {
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
-// ─── Mapping colonnes CSV attendues (Bilan Complet) ─────────
-const EXPECTED_COLUMNS = [
-  'nom', 'prenom', 'date_naissance', 'sexe', 'telephone', 'email', 'ville',
-  'motif_consultation', 'antecedents_oculaires', 'antecedents_generaux',
-  'port_actuel',
+// ─── Mapping colonnes CSV attendues (Bilan Complet étendu) ──
+const PATIENT_COLUMNS_COMPLET = [
+  'nom',
+  'prenom',
+  'date_naissance',
+  'sexe',
+  'telephone',
+  'email',
+  'ville',
+];
+
+const EXAMEN_IMPORT_COLUMNS = [
+  'date_examen', 'praticien',
+  'motif_consultation', 'dernier_examen_ophtalmo', 'fonction_patient', 'loisir_patient',
+  'symptomes_visuels', 'symptomes_oculaires', 'traitement_actuel',
+  'port_lunettes', 'port_lentilles', 'port_reeducation',
+  'comp_actuelle_od_sph', 'comp_actuelle_od_cyl', 'comp_actuelle_od_axe', 'comp_actuelle_od_add', 'comp_actuelle_od_prisme', 'comp_actuelle_od_base',
+  'comp_actuelle_og_sph', 'comp_actuelle_og_cyl', 'comp_actuelle_og_axe', 'comp_actuelle_og_add', 'comp_actuelle_og_prisme', 'comp_actuelle_og_base',
+  'pathologie_oculaire_presence', 'pathologie_oculaire_description',
+  'sante_maladie_presence', 'sante_maladie_detail',
+  'sante_medicament_presence', 'sante_medicament_detail',
+  'sante_allergie_presence', 'sante_allergie_detail',
+  'hypothese_clinique',
+  'harmon_cm', 'revip_cm', 'ppc_pb_cm', 'ppc_pr_cm',
+  'motilite_oculaire', 'reflexe_lumiere_mm', 'reflexe_penombre_mm',
+  'perrla', 'perrla_remarque',
+  'champ_vision_preliminaire',
+  'vision_couleurs_methode', 'vision_couleurs_od', 'vision_couleurs_og', 'vision_couleurs_odg',
+  'champ_visuel',
+  'cover_uni_vl', 'cover_uni_vp', 'cover_alt_vl', 'cover_alt_vp',
+  'av_brute_vl_od', 'av_brute_vl_og', 'av_brute_vl_odg',
+  'av_brute_vp_od', 'av_brute_vp_og', 'av_brute_vp_odg',
+  'ancien_od_sph', 'ancien_od_cyl', 'ancien_od_axe',
+  'ancien_og_sph', 'ancien_og_cyl', 'ancien_og_axe',
+  'ecart_pupillaire_vl_mm', 'ecart_pupillaire_vp_mm',
+  'methode_equilibre', 'equilibre_bio_bino', 'test_equilibre',
+  'controle_vb', 'essai_compensation',
+  'addition_distance_cm', 'addition_delta',
+  'phorie_vl_h', 'phorie_vl_v', 'phorie_vp_h', 'phorie_vp_v',
+  'lead_lag_valeur', 'lead_lag_reference',
+  'arn_valeur', 'arp_valeur',
+  'ppa_od_cm', 'ppa_od_amax', 'ppa_og_cm', 'ppa_og_amax', 'ppa_odg_cm', 'ppa_odg_amax',
+  'aca_calcule', 'aca_gradient',
+  'flex_bino_cpm', 'flex_mono_od_cpm', 'flex_mono_og_cpm',
+  'rfn_vl_flou', 'rfn_vl_rupture', 'rfn_vl_reprise',
+  'rfn_vp_flou', 'rfn_vp_rupture', 'rfn_vp_reprise',
+  'rfp_vl_flou', 'rfp_vl_rupture', 'rfp_vl_reprise',
+  'rfp_vp_flou', 'rfp_vp_rupture', 'rfp_vp_reprise',
+  'zone_vl_points', 'zone_vp_points',
+  'critere_sheard', 'critere_percival',
   'av_od_sc', 'av_og_sc', 'av_od_ac', 'av_og_ac', 'av_binoculaire',
   'auto_od_sphere', 'auto_od_cylindre', 'auto_od_axe',
   'auto_og_sphere', 'auto_og_cylindre', 'auto_og_axe',
-  'rx_od_sphere', 'rx_od_cylindre', 'rx_od_axe', 'rx_od_addition',
-  'rx_og_sphere', 'rx_og_cylindre', 'rx_og_axe', 'rx_og_addition',
+  'rx_od_sphere', 'rx_od_cylindre', 'rx_od_axe', 'rx_od_addition', 'rx_od_prisme', 'rx_od_base_prisme',
+  'rx_og_sphere', 'rx_og_cylindre', 'rx_og_axe', 'rx_og_addition', 'rx_og_prisme', 'rx_og_base_prisme',
   'dp_od', 'dp_og', 'dp_binoculaire',
-  'pio_od', 'pio_og',
-  'diagnostic', 'observations', 'praticien',
+  'pio_od', 'pio_og', 'methode_pio',
+  'cover_test', 'test_couleurs', 'fond_oeil', 'biomicroscopie',
+  'prescription_finale_od_sph', 'prescription_finale_od_cyl', 'prescription_finale_od_axe', 'prescription_finale_od_prisme', 'prescription_finale_od_base',
+  'prescription_finale_og_sph', 'prescription_finale_og_cyl', 'prescription_finale_og_axe', 'prescription_finale_og_prisme', 'prescription_finale_og_base',
+  'prescription_finale_addition', 'prescription_finale_distance_lecture_cm',
+  'interpretation_ppc_statut', 'interpretation_ppc_valeur',
+  'interpretation_phories_statut', 'interpretation_phories_valeur',
+  'interpretation_lead_lag_statut', 'interpretation_lead_lag_valeur',
+  'interpretation_arn_arp_statut', 'interpretation_arn_arp_valeur',
+  'interpretation_ppa_statut', 'interpretation_ppa_valeur',
+  'interpretation_aca_statut', 'interpretation_aca_valeur',
+  'interpretation_flex_statut', 'interpretation_flex_valeur',
+  'interpretation_rf_statut', 'interpretation_rf_valeur',
+  'diagnostic', 'observations',
+  // Compatibilite anciens fichiers
+  'antecedents_oculaires', 'antecedents_generaux', 'port_actuel',
 ];
 
+const EXPECTED_COLUMNS = [...PATIENT_COLUMNS_COMPLET, ...EXAMEN_IMPORT_COLUMNS];
+
 const REQUIRED_COLUMNS = ['nom', 'prenom', 'date_naissance', 'sexe'];
+
+const EXAMEN_AV_FIELDS = new Set([
+  'av_od_sc', 'av_og_sc', 'av_od_ac', 'av_og_ac', 'av_binoculaire',
+]);
+
+const EXAMEN_INTEGER_FIELDS = new Set([
+  'auto_od_axe', 'auto_og_axe', 'rx_od_axe', 'rx_og_axe',
+  'comp_actuelle_od_axe', 'comp_actuelle_og_axe',
+  'ancien_od_axe', 'ancien_og_axe',
+  'prescription_finale_od_axe', 'prescription_finale_og_axe',
+]);
+
+const EXAMEN_NUMERIC_FIELDS = new Set([
+  'auto_od_sphere', 'auto_od_cylindre', 'auto_og_sphere', 'auto_og_cylindre',
+  'rx_od_sphere', 'rx_od_cylindre', 'rx_od_addition', 'rx_od_prisme',
+  'rx_og_sphere', 'rx_og_cylindre', 'rx_og_addition', 'rx_og_prisme',
+  'dp_od', 'dp_og', 'dp_binoculaire', 'pio_od', 'pio_og',
+  'harmon_cm', 'revip_cm', 'ppc_pb_cm', 'ppc_pr_cm',
+  'reflexe_lumiere_mm', 'reflexe_penombre_mm',
+  'comp_actuelle_od_sph', 'comp_actuelle_od_cyl', 'comp_actuelle_od_add', 'comp_actuelle_od_prisme',
+  'comp_actuelle_og_sph', 'comp_actuelle_og_cyl', 'comp_actuelle_og_add', 'comp_actuelle_og_prisme',
+  'ancien_od_sph', 'ancien_od_cyl', 'ancien_og_sph', 'ancien_og_cyl',
+  'ecart_pupillaire_vl_mm', 'ecart_pupillaire_vp_mm',
+  'addition_distance_cm', 'addition_delta',
+  'phorie_vl_h', 'phorie_vl_v', 'phorie_vp_h', 'phorie_vp_v',
+  'lead_lag_valeur', 'arn_valeur', 'arp_valeur',
+  'ppa_od_cm', 'ppa_od_amax', 'ppa_og_cm', 'ppa_og_amax', 'ppa_odg_cm', 'ppa_odg_amax',
+  'aca_calcule', 'aca_gradient',
+  'flex_bino_cpm', 'flex_mono_od_cpm', 'flex_mono_og_cpm',
+  'rfn_vl_flou', 'rfn_vl_rupture', 'rfn_vl_reprise',
+  'rfn_vp_flou', 'rfn_vp_rupture', 'rfn_vp_reprise',
+  'rfp_vl_flou', 'rfp_vl_rupture', 'rfp_vl_reprise',
+  'rfp_vp_flou', 'rfp_vp_rupture', 'rfp_vp_reprise',
+  'prescription_finale_od_sph', 'prescription_finale_od_cyl', 'prescription_finale_od_prisme',
+  'prescription_finale_og_sph', 'prescription_finale_og_cyl', 'prescription_finale_og_prisme',
+  'prescription_finale_addition', 'prescription_finale_distance_lecture_cm',
+]);
+
+const EXAMEN_BOOLEAN_FIELDS = new Set([
+  'port_lunettes', 'port_lentilles', 'port_reeducation',
+  'vision_couleurs_od', 'vision_couleurs_og', 'vision_couleurs_odg',
+  'controle_vb', 'essai_compensation',
+]);
+
+const EXAMEN_TOGGLE_FIELDS = new Set([
+  'pathologie_oculaire_presence',
+  'sante_maladie_presence',
+  'sante_medicament_presence',
+  'sante_allergie_presence',
+  'perrla',
+  'critere_sheard',
+  'critere_percival',
+]);
+
+const EXAMEN_DATE_FIELDS = new Set(['dernier_examen_ophtalmo', 'date_examen']);
+
+const BASE_PRISM_FIELDS = new Set([
+  'comp_actuelle_od_base',
+  'comp_actuelle_og_base',
+  'rx_od_base_prisme',
+  'rx_og_base_prisme',
+  'prescription_finale_od_base',
+  'prescription_finale_og_base',
+]);
 
 // ─── Mapping colonnes CSV (Bilan Simplifié) ─────────────────
 const EXPECTED_COLUMNS_SIMPLE = [
@@ -310,35 +435,113 @@ export default function ImportCSV() {
     let failed = 0;
     const errors = [];
 
+    const normalizeCsvString = (val) => {
+      if (val === null || val === undefined) return null;
+      const s = String(val).trim();
+      return s === '' ? null : s;
+    };
+
+    const safeFloat = (val) => {
+      const s = normalizeCsvString(val);
+      if (s === null) return null;
+      const n = Number.parseFloat(s.replace(/\s+/g, '').replace(',', '.'));
+      return Number.isNaN(n) ? null : n;
+    };
+
+    const safeInteger = (val) => {
+      const n = safeFloat(val);
+      if (n === null) return null;
+      return Number.isInteger(n) ? n : Math.round(n);
+    };
+
+    const normalizeDate = (val) => {
+      const s = normalizeCsvString(val);
+      if (s === null) return null;
+
+      if (/^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(s)) {
+        const [dd, mm, yyyy] = s.split(/[\/-]/);
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      if (/^\d{2}\s+\d{2}\s+\d{4}$/.test(s)) {
+        const [dd, mm, yyyy] = s.split(/\s+/);
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      if (/^\d{4}[\/-]\d{2}[\/-]\d{2}$/.test(s)) {
+        return s.replace(/\//g, '-');
+      }
+
+      return s;
+    };
+
+    const parseAV = (val) => {
+      const raw = normalizeCsvString(val);
+      if (raw === null) return null;
+
+      const normalized = raw
+        .toLowerCase()
+        .replace(',', '.')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+      const octMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*(?:oct\.?|dixieme?s?\.?|\/\s*10)$/);
+      if (octMatch) {
+        const v = Number.parseFloat(octMatch[1]) / 10;
+        return Number.isNaN(v) ? null : v;
+      }
+
+      const fracMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+      if (fracMatch) {
+        const numerator = Number.parseFloat(fracMatch[1]);
+        const denominator = Number.parseFloat(fracMatch[2]);
+        if (Number.isNaN(numerator) || Number.isNaN(denominator) || denominator === 0) return null;
+        return numerator / denominator;
+      }
+
+      return safeFloat(normalized);
+    };
+
+    const parseBooleanInt = (val) => {
+      if (typeof val === 'boolean') return val ? 1 : 0;
+      const s = normalizeCsvString(val);
+      if (s === null) return null;
+      const token = s.toLowerCase();
+      if (['1', 'true', 'oui', 'yes', 'y', 'x', 'vrai'].includes(token)) return 1;
+      if (['0', 'false', 'non', 'no', 'n', 'faux'].includes(token)) return 0;
+      return null;
+    };
+
+    const parseToggleOuiNon = (val) => {
+      if (typeof val === 'boolean') return val ? 'oui' : 'non';
+      const s = normalizeCsvString(val);
+      if (s === null) return null;
+      const token = s.toLowerCase();
+      if (['1', 'true', 'oui', 'yes', 'y', 'x', 'vrai'].includes(token)) return 'oui';
+      if (['0', 'false', 'non', 'no', 'n', 'faux'].includes(token)) return 'non';
+      return token;
+    };
+
+    const normalizePrismBase = (val) => {
+      const s = normalizeCsvString(val);
+      if (s === null) return null;
+      const token = s.toUpperCase().replace(/[^A-Z]/g, '');
+
+      if (['BH', 'H', 'HAUT'].includes(token)) return 'BH';
+      if (['BB', 'B', 'BAS'].includes(token)) return 'BB';
+      if (['BN', 'NASAL', 'INTERNE', 'IN'].includes(token)) return 'BN';
+      if (['BT', 'TEMPORAL', 'EXTERNE', 'EX'].includes(token)) return 'BT';
+
+      return s.toUpperCase();
+    };
+
     for (const row of parsed.rows) {
       try {
-        // ── Helper: safe float parser (0 stays 0, empty/NaN → null)
-        const safeFloat = (val) => {
-          if (val === null || val === undefined || val === '') return null;
-          const v = parseFloat(val);
-          return isNaN(v) ? null : v;
-        };
-
         // ── Normalize sexe: "Homme" → "M", "Femme" → "F", else "Autre"
         const sexeMap = { homme: 'M', masculin: 'M', m: 'M', femme: 'F', feminin: 'F', féminin: 'F', f: 'F' };
         const normalizedSexe = sexeMap[(row.sexe || '').toLowerCase().trim()] || 'Autre';
-
-        // ── Normalize date_naissance: DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY → YYYY-MM-DD
-        let normalizedDate = (row.date_naissance || '').trim();
-        // DD/MM/YYYY or DD-MM-YYYY
-        if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(normalizedDate)) {
-          const [dd, mm, yyyy] = normalizedDate.split(/[\/\-]/);
-          normalizedDate = `${yyyy}-${mm}-${dd}`;
-        }
-        // DD MM YYYY (espaces)
-        else if (/^\d{2}\s+\d{2}\s+\d{4}$/.test(normalizedDate)) {
-          const [dd, mm, yyyy] = normalizedDate.split(/\s+/);
-          normalizedDate = `${yyyy}-${mm}-${dd}`;
-        }
-        // YYYY/MM/DD or YYYY-MM-DD already OK
-        else if (/^\d{4}[\/\-]\d{2}[\/\-]\d{2}$/.test(normalizedDate)) {
-          normalizedDate = normalizedDate.replace(/\//g, '-');
-        }
+        const normalizedDate = normalizeDate(row.date_naissance);
+        const rowLabel = `${row.nom || 'Inconnu'} ${row.prenom || ''}`.trim();
 
         // Step 1: Create patient
         const patientRes = await fetch('http://localhost:8000/api/patients', {
@@ -349,78 +552,53 @@ export default function ImportCSV() {
             prenom: row.prenom,
             date_naissance: normalizedDate,
             sexe: normalizedSexe,
-            telephone: row.telephone || null,
-            email: row.email || null,
-            ville: row.ville || null,
+            telephone: normalizeCsvString(row.telephone),
+            email: normalizeCsvString(row.email),
+            ville: normalizeCsvString(row.ville),
             consentement_rgpd: 1,
           }),
         });
         if (!patientRes.ok) {
+          const err = await patientRes.json().catch(() => ({}));
           failed++;
-          errors.push(`${row.nom} ${row.prenom}: erreur création patient`);
+          errors.push(`${rowLabel}: erreur création patient (${err.detail || patientRes.status})`);
           continue;
         }
         const patient = await patientRes.json();
 
-        // ── Helper: parse AV values like "6 oct" → 0.6, "10 oct" → 1.0, or plain "0.8" → 0.8
-        const parseAV = (val) => {
-          if (!val || val === '') return null;
-          const s = val.toString().trim().toLowerCase();
-          // Format "X oct" or "X/10" → value / 10
-          const octMatch = s.match(/^(\d+(?:\.\d+)?)\s*(?:oct|dixième|dixiemes?|\/\s*10)/);
-          if (octMatch) {
-            const v = parseFloat(octMatch[1]) / 10;
-            return isNaN(v) ? null : v;
-          }
-          // Fraction like "6/10"
-          const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-          if (fracMatch) {
-            const v = parseFloat(fracMatch[1]) / parseFloat(fracMatch[2]);
-            return isNaN(v) ? null : v;
-          }
-          const v = parseFloat(s);
-          return isNaN(v) ? null : v;
-        };
-
-        // Step 2: Create examen with all clinical data
+        // Step 2: Create examen with all extended clinical data
         const examenData = {
           patient_id: patient.patient_id,
-          praticien: row.praticien || 'Import CSV',
-          motif_consultation: row.motif_consultation || '',
-          antecedents_oculaires: row.antecedents_oculaires || '',
-          antecedents_generaux: row.antecedents_generaux || '',
-          port_actuel: row.port_actuel || '',
-          // AV (handle "6 oct" = 6/10 = 0.6 format)
-          av_od_sc: parseAV(row.av_od_sc),
-          av_og_sc: parseAV(row.av_og_sc),
-          av_od_ac: parseAV(row.av_od_ac),
-          av_og_ac: parseAV(row.av_og_ac),
-          av_binoculaire: parseAV(row.av_binoculaire),
-          // Autorefraction
-          auto_od_sphere: safeFloat(row.auto_od_sphere),
-          auto_od_cylindre: safeFloat(row.auto_od_cylindre),
-          auto_od_axe: safeFloat(row.auto_od_axe),
-          auto_og_sphere: safeFloat(row.auto_og_sphere),
-          auto_og_cylindre: safeFloat(row.auto_og_cylindre),
-          auto_og_axe: safeFloat(row.auto_og_axe),
-          // Subjective refraction
-          rx_od_sphere: safeFloat(row.rx_od_sphere),
-          rx_od_cylindre: safeFloat(row.rx_od_cylindre),
-          rx_od_axe: safeFloat(row.rx_od_axe),
-          rx_od_addition: safeFloat(row.rx_od_addition),
-          rx_og_sphere: safeFloat(row.rx_og_sphere),
-          rx_og_cylindre: safeFloat(row.rx_og_cylindre),
-          rx_og_axe: safeFloat(row.rx_og_axe),
-          rx_og_addition: safeFloat(row.rx_og_addition),
-          // Measures
-          dp_od: safeFloat(row.dp_od),
-          dp_og: safeFloat(row.dp_og),
-          dp_binoculaire: safeFloat(row.dp_binoculaire),
-          pio_od: safeFloat(row.pio_od),
-          pio_og: safeFloat(row.pio_og),
-          diagnostic: row.diagnostic || '',
-          observations: row.observations || '',
+          praticien: normalizeCsvString(row.praticien) || 'Import CSV',
         };
+
+        for (const field of EXAMEN_IMPORT_COLUMNS) {
+          if (field === 'praticien') continue;
+          if (!(field in row)) continue;
+
+          let parsedValue;
+          if (EXAMEN_AV_FIELDS.has(field)) {
+            parsedValue = parseAV(row[field]);
+          } else if (EXAMEN_INTEGER_FIELDS.has(field)) {
+            parsedValue = safeInteger(row[field]);
+          } else if (EXAMEN_NUMERIC_FIELDS.has(field)) {
+            parsedValue = safeFloat(row[field]);
+          } else if (EXAMEN_BOOLEAN_FIELDS.has(field)) {
+            parsedValue = parseBooleanInt(row[field]);
+          } else if (EXAMEN_TOGGLE_FIELDS.has(field)) {
+            parsedValue = parseToggleOuiNon(row[field]);
+          } else if (EXAMEN_DATE_FIELDS.has(field)) {
+            parsedValue = normalizeDate(row[field]);
+          } else if (BASE_PRISM_FIELDS.has(field)) {
+            parsedValue = normalizePrismBase(row[field]);
+          } else {
+            parsedValue = normalizeCsvString(row[field]);
+          }
+
+          if (parsedValue !== null && parsedValue !== undefined && parsedValue !== '') {
+            examenData[field] = parsedValue;
+          }
+        }
 
         const examenRes = await fetch('http://localhost:8000/api/examens', {
           method: 'POST',
@@ -430,12 +608,13 @@ export default function ImportCSV() {
         if (examenRes.ok) {
           success++;
         } else {
+          const err = await examenRes.json().catch(() => ({}));
           failed++;
-          errors.push(`${row.nom} ${row.prenom}: erreur création examen`);
+          errors.push(`${rowLabel}: erreur création examen (${err.detail || examenRes.status})`);
         }
       } catch (err) {
         failed++;
-        errors.push(`${row.nom} ${row.prenom}: ${err.message}`);
+        errors.push(`${row.nom || 'Inconnu'} ${row.prenom || ''}: ${err.message}`);
       }
     }
 

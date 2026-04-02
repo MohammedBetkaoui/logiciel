@@ -3,7 +3,7 @@
 // Conforme ISO 13666 / ISO 8596
 // ─────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import html2pdf from 'html2pdf.js';
 import {
   ArrowLeft, FileDown, Download, Printer, Eye, Glasses, Move,
@@ -100,10 +100,157 @@ function toDisplayValue(key, val) {
   return String(val);
 }
 
+function hasFilledValue(val) {
+  if (val === null || val === undefined) return false;
+  if (typeof val === 'string') return val.trim() !== '';
+  return true;
+}
+
+const TECHNICAL_FIELDS = new Set([
+  'examen_id',
+  'patient_id',
+  'signature_hash',
+  'date_creation',
+  'date_modification',
+  'date_examen',
+  'niveau_urgence',
+]);
+
+const EXTENDED_GROUP_ORDER = [
+  'Anamnèse',
+  'Examen préliminaire',
+  'Cover test & AV brute',
+  'Vision binoculaire détaillée',
+  'Prescription finale',
+  'Interprétation',
+  'Autres informations',
+];
+
+function categorizeExtendedField(key) {
+  if (!key) return 'Autres informations';
+
+  if (
+    key.startsWith('motif_') ||
+    key === 'dernier_examen_ophtalmo' ||
+    key === 'fonction_patient' ||
+    key === 'loisir_patient' ||
+    key.startsWith('symptomes_') ||
+    key.startsWith('traitement_') ||
+    key.startsWith('port_') ||
+    key.startsWith('comp_actuelle_') ||
+    key.startsWith('pathologie_') ||
+    key.startsWith('sante_') ||
+    key.startsWith('hypothese_') ||
+    key.startsWith('antecedents_') ||
+    key === 'port_actuel'
+  ) {
+    return 'Anamnèse';
+  }
+
+  if (
+    key.startsWith('harmon_') ||
+    key.startsWith('revip_') ||
+    key.startsWith('ppc_pb_') ||
+    key.startsWith('ppc_pr_') ||
+    key === 'motilite_oculaire' ||
+    key.startsWith('reflexe_') ||
+    key.startsWith('perrla') ||
+    key === 'champ_vision_preliminaire' ||
+    key.startsWith('vision_couleurs_')
+  ) {
+    return 'Examen préliminaire';
+  }
+
+  if (
+    key.startsWith('cover_') ||
+    key.startsWith('av_brute_') ||
+    key.startsWith('ancien_') ||
+    key.startsWith('ecart_pupillaire_') ||
+    key === 'methode_equilibre' ||
+    key === 'equilibre_bio_bino' ||
+    key === 'test_equilibre' ||
+    key === 'controle_vb' ||
+    key === 'essai_compensation'
+  ) {
+    return 'Cover test & AV brute';
+  }
+
+  if (
+    key === 'addition_distance_cm' ||
+    key === 'addition_delta' ||
+    key.startsWith('phorie_') ||
+    key.startsWith('lead_lag_') ||
+    key.startsWith('arn_') ||
+    key.startsWith('arp_') ||
+    key.startsWith('ppa_') ||
+    key.startsWith('aca_') ||
+    key.startsWith('flex_') ||
+    key.startsWith('rfn_') ||
+    key.startsWith('rfp_') ||
+    key.startsWith('zone_') ||
+    key.startsWith('critere_')
+  ) {
+    return 'Vision binoculaire détaillée';
+  }
+
+  if (key.startsWith('prescription_finale_')) {
+    return 'Prescription finale';
+  }
+
+  if (key.startsWith('interpretation_')) {
+    return 'Interprétation';
+  }
+
+  return 'Autres informations';
+}
+
+const NEW_BILAN_FIELDS = [
+  'motif_consultation', 'dernier_examen_ophtalmo', 'fonction_patient', 'loisir_patient',
+  'symptomes_visuels', 'symptomes_oculaires', 'traitement_actuel', 'port_lunettes',
+  'port_lentilles', 'port_reeducation', 'comp_actuelle_od_sph', 'comp_actuelle_od_cyl',
+  'comp_actuelle_od_axe', 'comp_actuelle_od_add', 'comp_actuelle_od_prisme', 'comp_actuelle_od_base',
+  'comp_actuelle_og_sph', 'comp_actuelle_og_cyl', 'comp_actuelle_og_axe', 'comp_actuelle_og_add',
+  'comp_actuelle_og_prisme', 'comp_actuelle_og_base', 'pathologie_oculaire_presence',
+  'pathologie_oculaire_description', 'sante_maladie_presence', 'sante_maladie_detail',
+  'sante_medicament_presence', 'sante_medicament_detail', 'sante_allergie_presence',
+  'sante_allergie_detail', 'hypothese_clinique', 'harmon_cm', 'revip_cm', 'ppc_pb_cm',
+  'ppc_pr_cm', 'reflexe_lumiere_mm', 'reflexe_penombre_mm', 'perrla', 'perrla_remarque',
+  'champ_vision_preliminaire', 'vision_couleurs_methode', 'vision_couleurs_od',
+  'vision_couleurs_og', 'vision_couleurs_odg', 'cover_uni_vl', 'cover_uni_vp', 'cover_alt_vl',
+  'cover_alt_vp', 'av_brute_vl_od', 'av_brute_vl_og', 'av_brute_vl_odg', 'av_brute_vp_od',
+  'av_brute_vp_og', 'av_brute_vp_odg', 'ancien_od_sph', 'ancien_od_cyl', 'ancien_od_axe',
+  'ancien_og_sph', 'ancien_og_cyl', 'ancien_og_axe', 'ecart_pupillaire_vl_mm',
+  'ecart_pupillaire_vp_mm', 'methode_equilibre', 'equilibre_bio_bino', 'test_equilibre',
+  'controle_vb', 'essai_compensation', 'addition_distance_cm', 'addition_delta', 'phorie_vl_h',
+  'phorie_vl_v', 'phorie_vp_h', 'phorie_vp_v', 'lead_lag_valeur', 'lead_lag_reference',
+  'arn_valeur', 'arp_valeur', 'ppa_od_cm', 'ppa_od_amax', 'ppa_og_cm', 'ppa_og_amax',
+  'ppa_odg_cm', 'ppa_odg_amax', 'aca_calcule', 'aca_gradient', 'flex_bino_cpm',
+  'flex_mono_od_cpm', 'flex_mono_og_cpm', 'rfn_vl_flou', 'rfn_vl_rupture', 'rfn_vl_reprise',
+  'rfn_vp_flou', 'rfn_vp_rupture', 'rfn_vp_reprise', 'rfp_vl_flou', 'rfp_vl_rupture',
+  'rfp_vl_reprise', 'rfp_vp_flou', 'rfp_vp_rupture', 'rfp_vp_reprise', 'zone_vl_points',
+  'zone_vp_points', 'critere_sheard', 'critere_percival', 'prescription_finale_od_sph',
+  'prescription_finale_od_cyl', 'prescription_finale_od_axe', 'prescription_finale_od_prisme',
+  'prescription_finale_od_base', 'prescription_finale_og_sph', 'prescription_finale_og_cyl',
+  'prescription_finale_og_axe', 'prescription_finale_og_prisme', 'prescription_finale_og_base',
+  'prescription_finale_addition', 'prescription_finale_distance_lecture_cm',
+  'interpretation_ppc_statut', 'interpretation_ppc_valeur', 'interpretation_phories_statut',
+  'interpretation_phories_valeur', 'interpretation_lead_lag_statut', 'interpretation_lead_lag_valeur',
+  'interpretation_arn_arp_statut', 'interpretation_arn_arp_valeur', 'interpretation_ppa_statut',
+  'interpretation_ppa_valeur', 'interpretation_aca_statut', 'interpretation_aca_valeur',
+  'interpretation_flex_statut', 'interpretation_flex_valeur', 'interpretation_rf_statut',
+  'interpretation_rf_valeur',
+];
+
 // ─── Composants d'affichage ──────────────────────────────────
 function DataField({ label, value, highlight, mono }) {
   return (
-    <div className="space-y-0.5">
+    <div
+      className={`rounded-lg border p-3 min-h-17 space-y-1 ${
+        highlight
+          ? 'border-red-200 bg-red-50/70 dark:border-red-900/40 dark:bg-red-900/10'
+          : 'border-neutral-100 bg-neutral-50/70 dark:border-neutral-700/70 dark:bg-neutral-900/20'
+      }`}
+    >
       <p className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
         {label}
       </p>
@@ -112,10 +259,31 @@ function DataField({ label, value, highlight, mono }) {
           highlight
             ? 'text-red-600 dark:text-red-400 font-bold'
             : 'text-neutral-800 dark:text-neutral-100'
-        } ${mono ? 'font-mono' : ''}`}
+        } ${mono ? 'font-mono' : ''} wrap-break-word leading-snug`}
       >
         {value}
       </p>
+    </div>
+  );
+}
+
+function MetricCard({ icon: Icon, label, value, tone = 'neutral' }) {
+  const tones = {
+    neutral: 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800',
+    info: 'border-blue-200 bg-blue-50/70 dark:border-blue-900/40 dark:bg-blue-900/10',
+    success: 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-900/10',
+    warning: 'border-amber-200 bg-amber-50/70 dark:border-amber-900/40 dark:bg-amber-900/10',
+  };
+
+  return (
+    <div className={`rounded-xl border p-3 ${tones[tone] || tones.neutral}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon size={14} className="text-neutral-500 dark:text-neutral-300" />
+        <p className="text-[10px] uppercase tracking-wide font-semibold text-neutral-500 dark:text-neutral-400">
+          {label}
+        </p>
+      </div>
+      <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 wrap-break-word">{value}</p>
     </div>
   );
 }
@@ -695,6 +863,82 @@ export default function BilanDetails({ examenId, onBack }) {
     }
   };
 
+  const orderedEntries = useMemo(() => {
+    if (!bilan) return [];
+    const rank = new Map(NEW_BILAN_FIELDS.map((k, idx) => [k, idx]));
+    return Object.entries(bilan).sort(([a], [b]) => {
+      const ra = rank.has(a) ? rank.get(a) : Number.MAX_SAFE_INTEGER;
+      const rb = rank.has(b) ? rank.get(b) : Number.MAX_SAFE_INTEGER;
+      if (ra !== rb) return ra - rb;
+      return a.localeCompare(b);
+    });
+  }, [bilan]);
+
+  const newFieldEntries = useMemo(
+    () => orderedEntries.filter(([key]) => NEW_BILAN_FIELDS.includes(key)),
+    [orderedEntries]
+  );
+
+  const filledNewFieldEntries = useMemo(
+    () => newFieldEntries.filter(([, val]) => hasFilledValue(val)),
+    [newFieldEntries]
+  );
+
+  const groupedNewFieldEntries = useMemo(() => {
+    const grouped = new Map();
+
+    filledNewFieldEntries.forEach(([key, val]) => {
+      const group = categorizeExtendedField(key);
+      if (!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group).push([key, val]);
+    });
+
+    return EXTENDED_GROUP_ORDER
+      .map((group) => ({
+        group,
+        items: (grouped.get(group) || []).sort(([a], [b]) =>
+          toDisplayLabel(a).localeCompare(toDisplayLabel(b), 'fr')
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [filledNewFieldEntries]);
+
+  const completeVisibleEntries = useMemo(
+    () => orderedEntries.filter(([key, val]) => hasFilledValue(val) && !TECHNICAL_FIELDS.has(key)),
+    [orderedEntries]
+  );
+
+  const technicalEntries = useMemo(
+    () => orderedEntries.filter(([key, val]) => hasFilledValue(val) && TECHNICAL_FIELDS.has(key)),
+    [orderedEntries]
+  );
+
+  const clinicalAlerts = useMemo(() => {
+    if (!bilan) return [];
+    const alerts = [];
+
+    const pioOd = Number(bilan.pio_od);
+    const pioOg = Number(bilan.pio_og);
+
+    if (!Number.isNaN(pioOd) && pioOd > 21) alerts.push('PIO OD supérieure à 21 mmHg');
+    if (!Number.isNaN(pioOg) && pioOg > 21) alerts.push('PIO OG supérieure à 21 mmHg');
+    if (bilan.motilite_oculaire === 'Anormale') alerts.push('Motilité oculaire anormale');
+    if (bilan.test_couleurs && String(bilan.test_couleurs).toLowerCase() !== 'normal') {
+      alerts.push('Anomalie au test des couleurs');
+    }
+
+    const champ = String(bilan.champ_visuel || '').toLowerCase();
+    if (champ && !['normal', 'normale'].includes(champ)) {
+      alerts.push('Champ visuel à surveiller');
+    }
+
+    if ((bilan.niveau_urgence ?? 0) >= 2) {
+      alerts.push(`Niveau d'urgence ${bilan.niveau_urgence}`);
+    }
+
+    return alerts;
+  }, [bilan]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-neutral-400">
@@ -714,8 +958,6 @@ export default function BilanDetails({ examenId, onBack }) {
       </div>
     );
   }
-
-  const orderedEntries = Object.entries(bilan).sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <div className="space-y-5">
@@ -770,6 +1012,34 @@ export default function BilanDetails({ examenId, onBack }) {
           </div>
           <UrgenceBadge niveau={bilan.niveau_urgence ?? 0} />
         </div>
+      </div>
+
+      {/* ─── Résumé rapide ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <MetricCard
+          icon={Calendar}
+          label="Date examen"
+          value={toDisplayValue('date_examen', bilan.date_examen)}
+          tone="info"
+        />
+        <MetricCard
+          icon={User}
+          label="Praticien"
+          value={fmt(bilan.praticien)}
+          tone="neutral"
+        />
+        <MetricCard
+          icon={Activity}
+          label="Champs cliniques renseignés"
+          value={`${filledNewFieldEntries.length}`}
+          tone="success"
+        />
+        <MetricCard
+          icon={AlertTriangle}
+          label="Points de vigilance"
+          value={`${clinicalAlerts.length}`}
+          tone={clinicalAlerts.length > 0 ? 'warning' : 'success'}
+        />
       </div>
 
       {/* ─── Identité / administratif ───────────────────────── */}
@@ -919,6 +1189,39 @@ export default function BilanDetails({ examenId, onBack }) {
         </div>
       </div>
 
+      {/* ─── Section: Nouvelles informations étendues ───────── */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5">
+        <SectionTitle icon={Activity} title="Informations Cliniques Étendues" badge={`${filledNewFieldEntries.length} champs`} />
+        {filledNewFieldEntries.length === 0 ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            Aucune information clinique étendue renseignée pour ce bilan.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {groupedNewFieldEntries.map((section) => (
+              <div key={section.group} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">{section.group}</h4>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300 font-medium">
+                    {section.items.length} champs
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {section.items.map(([key, val]) => (
+                    <DataField
+                      key={key}
+                      label={toDisplayLabel(key)}
+                      value={toDisplayValue(key, val)}
+                      mono={key.includes('id') || key.includes('hash')}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ─── Section: Conclusion ──────────────────────────── */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5">
         <SectionTitle icon={FileText} title="Diagnostic & Conclusion" />
@@ -935,6 +1238,18 @@ export default function BilanDetails({ examenId, onBack }) {
             </div>
           </div>
         )}
+        {clinicalAlerts.length > 0 && (
+          <div className="mt-4 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50/70 dark:bg-red-900/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-300 mb-2">
+              Points de vigilance détectés
+            </p>
+            <ul className="space-y-1">
+              {clinicalAlerts.map((item) => (
+                <li key={item} className="text-sm text-red-700 dark:text-red-300">• {item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* ─── Footer technique ─────────────────────────────── */}
@@ -947,20 +1262,48 @@ export default function BilanDetails({ examenId, onBack }) {
 
       {/* ─── Vue complète de tous les champs ──────────────── */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5">
-        <SectionTitle icon={Shield} title="Données Complètes du Bilan" badge={`${orderedEntries.length} champs`} />
+        <SectionTitle icon={Shield} title="Données Complètes du Bilan" badge={`${completeVisibleEntries.length} champs utiles`} />
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-          Cette section affiche tous les champs disponibles dans le bilan pour éviter toute omission d'information.
+          Vue audit repliable avec uniquement les valeurs renseignées, pour garder une lecture claire tout en conservant l'exhaustivité.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {orderedEntries.map(([key, val]) => (
-            <DataField
-              key={key}
-              label={toDisplayLabel(key)}
-              value={toDisplayValue(key, val)}
-              mono={key.includes('id') || key.includes('hash')}
-            />
-          ))}
-        </div>
+        <details className="group rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50/60 dark:bg-neutral-900/20">
+          <summary className="cursor-pointer list-none flex items-center justify-between text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+            <span>Afficher la vue complète</span>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400 group-open:hidden">Ouvrir</span>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400 hidden group-open:inline">Fermer</span>
+          </summary>
+
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {completeVisibleEntries.map(([key, val]) => (
+                <DataField
+                  key={key}
+                  label={toDisplayLabel(key)}
+                  value={toDisplayValue(key, val)}
+                  mono={key.includes('id') || key.includes('hash')}
+                />
+              ))}
+            </div>
+
+            {technicalEntries.length > 0 && (
+              <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 bg-white dark:bg-neutral-800">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 mb-3">
+                  Métadonnées techniques
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {technicalEntries.map(([key, val]) => (
+                    <DataField
+                      key={key}
+                      label={toDisplayLabel(key)}
+                      value={toDisplayValue(key, val)}
+                      mono={key.includes('id') || key.includes('hash')}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
       </div>
     </div>
   );

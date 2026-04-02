@@ -8,6 +8,8 @@ import {
   ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   Filter, X, Eye, Pencil, User, Calendar, AlertTriangle, Save,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import PasswordConfirmModal from '../ui/PasswordConfirmModal';
 
 const PAGE_SIZE = 15;
 
@@ -173,6 +175,7 @@ function toDisplayValue(key, value) {
 }
 
 export default function BilanSimpleList({ onEditBilan }) {
+  const { verifyPassword } = useAuth();
   const [bilans, setBilans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -183,6 +186,8 @@ export default function BilanSimpleList({ onEditBilan }) {
   const [sortField, setSortField] = useState('date_creation');
   const [sortDir, setSortDir] = useState('desc');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedBilan, setSelectedBilan] = useState(null);
   const [editBilan, setEditBilan] = useState(null);
@@ -210,6 +215,62 @@ export default function BilanSimpleList({ onEditBilan }) {
         if (selectedBilan?.bilan_simple_id === id) setSelectedBilan(null);
       }
     } catch { /* error */ }
+  };
+
+  const handleDeleteAllBilansSimples = async (password) => {
+    if (!password?.trim()) {
+      return { success: false, error: 'Veuillez saisir votre mot de passe.' };
+    }
+
+    const isPasswordValid = await verifyPassword(password);
+    if (!isPasswordValid) {
+      return { success: false, error: 'Mot de passe incorrect.' };
+    }
+
+    setBulkDeleting(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/bilans-simples', { method: 'DELETE' });
+      if (!res.ok) {
+        if (res.status === 404 || res.status === 405) {
+          const ids = bilans
+            .map((b) => b.bilan_simple_id)
+            .filter((id) => id !== null && id !== undefined);
+
+          let failed = 0;
+          for (const bilanId of ids) {
+            try {
+              const delRes = await fetch(`http://localhost:8000/api/bilans-simples/${bilanId}`, {
+                method: 'DELETE',
+              });
+              if (!delRes.ok) failed += 1;
+            } catch {
+              failed += 1;
+            }
+          }
+
+          if (failed > 0) {
+            return {
+              success: false,
+              error: `Suppression partielle: ${failed} bilan(s) n'ont pas pu etre supprime(s).`,
+            };
+          }
+        } else {
+          const err = await res.json().catch(() => ({}));
+          return { success: false, error: err.detail || 'Erreur lors de la suppression globale.' };
+        }
+      }
+
+      setDeleteConfirm(null);
+      setSelectedBilan(null);
+      setPage(0);
+      await loadBilans();
+      setDeleteAllOpen(false);
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Impossible de contacter le serveur.' };
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   // ─── Edit modal ──────────────────────────────────────────
@@ -391,6 +452,13 @@ export default function BilanSimpleList({ onEditBilan }) {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setDeleteAllOpen(true)}
+            disabled={bilans.length === 0 || bulkDeleting}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border bg-red-50 border-red-200 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 size={13} /> Supprimer tout
+          </button>
+          <button
             onClick={() => setShowFilters(!showFilters)}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
               showFilters || hasActiveFilters
@@ -408,6 +476,16 @@ export default function BilanSimpleList({ onEditBilan }) {
           </button>
         </div>
       </div>
+
+      <PasswordConfirmModal
+        isOpen={deleteAllOpen}
+        title="Supprimer tous les bilans simplifiés"
+        description={`Cette action supprimera définitivement ${bilans.length} bilan(s) simplifié(s).`}
+        confirmLabel="Supprimer tout"
+        isLoading={bulkDeleting}
+        onClose={() => setDeleteAllOpen(false)}
+        onConfirm={handleDeleteAllBilansSimples}
+      />
 
       {/* Search */}
       <div className="relative">

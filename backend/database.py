@@ -11,7 +11,163 @@ from datetime import datetime
 
 logger = logging.getLogger("bbadata.db")
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+
+EXAMENS_EXTRA_COLUMNS = {
+    # Anamnese
+    "motif_consultation": "TEXT",
+    "dernier_examen_ophtalmo": "TEXT",
+    "fonction_patient": "TEXT",
+    "loisir_patient": "TEXT",
+    "symptomes_visuels": "TEXT",
+    "symptomes_oculaires": "TEXT",
+    "traitement_actuel": "TEXT",
+    "port_lunettes": "INTEGER",
+    "port_lentilles": "INTEGER",
+    "port_reeducation": "INTEGER",
+    "comp_actuelle_od_sph": "REAL",
+    "comp_actuelle_od_cyl": "REAL",
+    "comp_actuelle_od_axe": "INTEGER",
+    "comp_actuelle_od_add": "REAL",
+    "comp_actuelle_od_prisme": "REAL",
+    "comp_actuelle_od_base": "TEXT",
+    "comp_actuelle_og_sph": "REAL",
+    "comp_actuelle_og_cyl": "REAL",
+    "comp_actuelle_og_axe": "INTEGER",
+    "comp_actuelle_og_add": "REAL",
+    "comp_actuelle_og_prisme": "REAL",
+    "comp_actuelle_og_base": "TEXT",
+    "pathologie_oculaire_presence": "TEXT",
+    "pathologie_oculaire_description": "TEXT",
+    "sante_maladie_presence": "TEXT",
+    "sante_maladie_detail": "TEXT",
+    "sante_medicament_presence": "TEXT",
+    "sante_medicament_detail": "TEXT",
+    "sante_allergie_presence": "TEXT",
+    "sante_allergie_detail": "TEXT",
+    "hypothese_clinique": "TEXT",
+    # Examen preliminaire
+    "harmon_cm": "REAL",
+    "revip_cm": "REAL",
+    "ppc_pb_cm": "REAL",
+    "ppc_pr_cm": "REAL",
+    "reflexe_lumiere_mm": "REAL",
+    "reflexe_penombre_mm": "REAL",
+    "perrla": "TEXT",
+    "perrla_remarque": "TEXT",
+    "champ_vision_preliminaire": "TEXT",
+    "vision_couleurs_methode": "TEXT",
+    "vision_couleurs_od": "INTEGER",
+    "vision_couleurs_og": "INTEGER",
+    "vision_couleurs_odg": "INTEGER",
+    # Cover test et AV brute
+    "cover_uni_vl": "TEXT",
+    "cover_uni_vp": "TEXT",
+    "cover_alt_vl": "TEXT",
+    "cover_alt_vp": "TEXT",
+    "av_brute_vl_od": "TEXT",
+    "av_brute_vl_og": "TEXT",
+    "av_brute_vl_odg": "TEXT",
+    "av_brute_vp_od": "TEXT",
+    "av_brute_vp_og": "TEXT",
+    "av_brute_vp_odg": "TEXT",
+    "ancien_od_sph": "REAL",
+    "ancien_od_cyl": "REAL",
+    "ancien_od_axe": "INTEGER",
+    "ancien_og_sph": "REAL",
+    "ancien_og_cyl": "REAL",
+    "ancien_og_axe": "INTEGER",
+    "ecart_pupillaire_vl_mm": "REAL",
+    "ecart_pupillaire_vp_mm": "REAL",
+    "methode_equilibre": "TEXT",
+    "equilibre_bio_bino": "TEXT",
+    "test_equilibre": "TEXT",
+    "controle_vb": "INTEGER",
+    "essai_compensation": "INTEGER",
+    # Vision binoculaire detaillee
+    "addition_distance_cm": "REAL",
+    "addition_delta": "REAL",
+    "phorie_vl_h": "REAL",
+    "phorie_vl_v": "REAL",
+    "phorie_vp_h": "REAL",
+    "phorie_vp_v": "REAL",
+    "lead_lag_valeur": "REAL",
+    "lead_lag_reference": "TEXT",
+    "arn_valeur": "REAL",
+    "arp_valeur": "REAL",
+    "ppa_od_cm": "REAL",
+    "ppa_od_amax": "REAL",
+    "ppa_og_cm": "REAL",
+    "ppa_og_amax": "REAL",
+    "ppa_odg_cm": "REAL",
+    "ppa_odg_amax": "REAL",
+    "aca_calcule": "REAL",
+    "aca_gradient": "REAL",
+    "flex_bino_cpm": "REAL",
+    "flex_mono_od_cpm": "REAL",
+    "flex_mono_og_cpm": "REAL",
+    "rfn_vl_flou": "REAL",
+    "rfn_vl_rupture": "REAL",
+    "rfn_vl_reprise": "REAL",
+    "rfn_vp_flou": "REAL",
+    "rfn_vp_rupture": "REAL",
+    "rfn_vp_reprise": "REAL",
+    "rfp_vl_flou": "REAL",
+    "rfp_vl_rupture": "REAL",
+    "rfp_vl_reprise": "REAL",
+    "rfp_vp_flou": "REAL",
+    "rfp_vp_rupture": "REAL",
+    "rfp_vp_reprise": "REAL",
+    "zone_vl_points": "TEXT",
+    "zone_vp_points": "TEXT",
+    "critere_sheard": "TEXT",
+    "critere_percival": "TEXT",
+    # Prescription finale
+    "prescription_finale_od_sph": "REAL",
+    "prescription_finale_od_cyl": "REAL",
+    "prescription_finale_od_axe": "INTEGER",
+    "prescription_finale_od_prisme": "REAL",
+    "prescription_finale_od_base": "TEXT",
+    "prescription_finale_og_sph": "REAL",
+    "prescription_finale_og_cyl": "REAL",
+    "prescription_finale_og_axe": "INTEGER",
+    "prescription_finale_og_prisme": "REAL",
+    "prescription_finale_og_base": "TEXT",
+    "prescription_finale_addition": "REAL",
+    "prescription_finale_distance_lecture_cm": "REAL",
+    # Interpretation
+    "interpretation_ppc_statut": "TEXT",
+    "interpretation_ppc_valeur": "TEXT",
+    "interpretation_phories_statut": "TEXT",
+    "interpretation_phories_valeur": "TEXT",
+    "interpretation_lead_lag_statut": "TEXT",
+    "interpretation_lead_lag_valeur": "TEXT",
+    "interpretation_arn_arp_statut": "TEXT",
+    "interpretation_arn_arp_valeur": "TEXT",
+    "interpretation_ppa_statut": "TEXT",
+    "interpretation_ppa_valeur": "TEXT",
+    "interpretation_aca_statut": "TEXT",
+    "interpretation_aca_valeur": "TEXT",
+    "interpretation_flex_statut": "TEXT",
+    "interpretation_flex_valeur": "TEXT",
+    "interpretation_rf_statut": "TEXT",
+    "interpretation_rf_valeur": "TEXT",
+}
+
+
+def _ensure_examens_extra_columns(conn: sqlite3.Connection):
+    """Ajoute les nouvelles colonnes de bilan étendu si elles manquent."""
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(examens)").fetchall()}
+    added = 0
+
+    for column_name, column_type in EXAMENS_EXTRA_COLUMNS.items():
+        if column_name not in existing:
+            conn.execute(f"ALTER TABLE examens ADD COLUMN {column_name} {column_type}")
+            added += 1
+
+    if added:
+        conn.commit()
+        logger.info(f"Migration examens: {added} colonnes étendues ajoutées")
 
 # ─── Schéma principal (terminologie ISO 13666) ─────────────────
 SCHEMA_SQL = """
@@ -223,13 +379,14 @@ def init_database(db_path: str = "data/bbadata.db") -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout=5000")      # Timeout 5s
 
     conn.executescript(SCHEMA_SQL)
+    _ensure_examens_extra_columns(conn)
 
     # Marquer la version du schéma
     existing = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0]
     if not existing or existing < SCHEMA_VERSION:
         conn.execute(
             "INSERT INTO schema_version (version, description) VALUES (?, ?)",
-            (SCHEMA_VERSION, "Schéma initial – ISO 13666 / 45 champs cliniques"),
+            (SCHEMA_VERSION, "Extension du schéma examens – nouveaux champs bilan optométrique"),
         )
         conn.commit()
 
