@@ -57,6 +57,7 @@ const EXAMEN_IMPORT_COLUMNS = [
   'controle_vb', 'essai_compensation',
   'addition_distance_cm', 'addition_delta',
   'phorie_vl_h', 'phorie_vl_v', 'phorie_vp_h', 'phorie_vp_v',
+  'phorie_associee_vl', 'phorie_associee_vp',
   'lead_lag_valeur', 'lead_lag_reference',
   'arn_valeur', 'arp_valeur',
   'ppa_od_cm', 'ppa_od_amax', 'ppa_og_cm', 'ppa_og_amax', 'ppa_odg_cm', 'ppa_odg_amax',

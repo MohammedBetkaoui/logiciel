@@ -40,12 +40,6 @@ const BASE_PRISME_OPTIONS = [
   { value: 'BT', label: 'BT' },
 ];
 
-const METHODE_PIO_OPTIONS = [
-  { value: 'tonometre_air', label: 'Tonomètre à air' },
-  { value: 'applanation', label: 'Applanation (Goldmann)' },
-  { value: 'icare', label: 'iCare (rebond)' },
-];
-
 const INPUT_CLASS =
   'w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-500';
 
@@ -470,16 +464,6 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
     max: { value: V.AV.max, message: 'Max 2.0' },
   };
 
-  const pioRules = {
-    min: { value: V.PIO.min, message: `Min ${V.PIO.min} mmHg` },
-    max: { value: V.PIO.max, message: `Max ${V.PIO.max} mmHg` },
-  };
-
-  const dpRules = {
-    min: { value: V.DP.min, message: `Min ${V.DP.min} mm` },
-    max: { value: V.DP.max, message: `Max ${V.DP.max} mm` },
-  };
-
   const prismeRules = {
     min: { value: 0, message: 'Min 0 Δ' },
     max: { value: V.PRISME.max, message: `Max ${V.PRISME.max} Δ` },
@@ -514,7 +498,7 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
               </FieldGroup>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
               <FieldGroup label="Examiné par (optométriste) *">
                 <TextInput
                   register={register}
@@ -523,6 +507,14 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
                   placeholder="Dr. Nom"
                 />
                 <FieldError message={errors.praticien?.message} />
+              </FieldGroup>
+
+              <FieldGroup label="Groupe">
+                <TextInput
+                  register={register}
+                  name="groupe"
+                  placeholder="Ex: Groupe A"
+                />
               </FieldGroup>
 
               <FieldGroup label="Date examen">
@@ -624,51 +616,6 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
               </div>
             </div>
 
-            <div>
-              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-2 uppercase tracking-wide">
-                Compensation optique actuelle
-              </p>
-              <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
-                <table className="min-w-full text-xs">
-                  <thead className="bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold">Œil</th>
-                      <th className="px-2 py-2 text-left font-semibold">SPH</th>
-                      <th className="px-2 py-2 text-left font-semibold">CYL</th>
-                      <th className="px-2 py-2 text-left font-semibold">AXE</th>
-                      <th className="px-2 py-2 text-left font-semibold">ADD</th>
-                      <th className="px-2 py-2 text-left font-semibold">PRISME</th>
-                      <th className="px-2 py-2 text-left font-semibold">BASE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-neutral-200 dark:border-neutral-700">
-                      <td className="px-3 py-2 font-semibold text-blue-600 dark:text-blue-400">OD</td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_od_sph" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_od_cyl" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_od_axe" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_od_add" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_od_prisme" /></td>
-                      <td className="px-2 py-2">
-                        <InlineCellSelect register={register} name="comp_actuelle_od_base" options={BASE_PRISME_OPTIONS} />
-                      </td>
-                    </tr>
-                    <tr className="border-t border-neutral-200 dark:border-neutral-700">
-                      <td className="px-3 py-2 font-semibold text-emerald-600 dark:text-emerald-400">OG</td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_og_sph" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_og_cyl" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_og_axe" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_og_add" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="comp_actuelle_og_prisme" /></td>
-                      <td className="px-2 py-2">
-                        <InlineCellSelect register={register} name="comp_actuelle_og_base" options={BASE_PRISME_OPTIONS} />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <FieldGroup label="Pathologie oculaire">
@@ -763,18 +710,15 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
         />
         {openSections.preliminaire && (
           <div className="p-5 space-y-5 border border-t-0 border-neutral-200 dark:border-neutral-700 rounded-b-xl">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FieldGroup label="Harmon (cm)">
                 <NumberInput register={register} name="harmon_cm" step={0.1} placeholder="cm" />
               </FieldGroup>
               <FieldGroup label="Revip (cm)">
                 <NumberInput register={register} name="revip_cm" step={0.1} placeholder="cm" />
               </FieldGroup>
-              <FieldGroup label="PPC – P.B (cm)">
+              <FieldGroup label="PPC (cm)">
                 <NumberInput register={register} name="ppc_pb_cm" step={0.1} placeholder="cm" />
-              </FieldGroup>
-              <FieldGroup label="PPC – P.R (cm)">
-                <NumberInput register={register} name="ppc_pr_cm" step={0.1} placeholder="cm" />
               </FieldGroup>
             </div>
 
@@ -917,36 +861,6 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-2 uppercase tracking-wide">AV brute</p>
-              <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
-                <table className="min-w-full text-xs">
-                  <thead className="bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold">Distance</th>
-                      <th className="px-2 py-2 text-left font-semibold">OD</th>
-                      <th className="px-2 py-2 text-left font-semibold">OG</th>
-                      <th className="px-2 py-2 text-left font-semibold">ODG</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-neutral-200 dark:border-neutral-700">
-                      <td className="px-3 py-2 font-semibold">VL</td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="av_brute_vl_od" placeholder="x/10" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="av_brute_vl_og" placeholder="x/10" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="av_brute_vl_odg" placeholder="x/10" /></td>
-                    </tr>
-                    <tr className="border-t border-neutral-200 dark:border-neutral-700">
-                      <td className="px-3 py-2 font-semibold">VP</td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="av_brute_vp_od" placeholder="x/10" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="av_brute_vp_og" placeholder="x/10" /></td>
-                      <td className="px-2 py-2"><InlineCellInput register={register} name="av_brute_vp_odg" placeholder="x/10" /></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
               <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-2 uppercase tracking-wide">
                 Correction autoref / ancien équipement
               </p>
@@ -1070,6 +984,36 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
                       <td className="px-3 py-2 font-semibold">VP</td>
                       <td className="px-2 py-2"><InlineCellInput register={register} name="phorie_vp_h" /></td>
                       <td className="px-2 py-2"><InlineCellInput register={register} name="phorie_vp_v" /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-2 uppercase tracking-wide">
+                Phorie associée
+              </p>
+              <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold">Test</th>
+                      <th className="px-2 py-2 text-left font-semibold">Mesure</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-neutral-200 dark:border-neutral-700">
+                      <td className="px-3 py-2 font-semibold">VL / Croix polarisée</td>
+                      <td className="px-2 py-2">
+                        <InlineCellInput register={register} name="phorie_associee_vl" placeholder="Ex: 2 EXO Δ" />
+                      </td>
+                    </tr>
+                    <tr className="border-t border-neutral-200 dark:border-neutral-700">
+                      <td className="px-3 py-2 font-semibold">VP / Test de Mallet</td>
+                      <td className="px-2 py-2">
+                        <InlineCellInput register={register} name="phorie_associee_vp" placeholder="Ex: 1 ESO Δ" />
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -1339,85 +1283,6 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
           <div className="p-5 space-y-6 border border-t-0 border-neutral-200 dark:border-neutral-700 rounded-b-xl">
             <div>
               <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-3 uppercase tracking-wide">
-                Réfraction objective (autoréfractomètre)
-              </p>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2 p-3 bg-neutral-50 dark:bg-neutral-800/40 rounded-lg">
-                  <p className="text-xs font-bold text-blue-600 dark:text-blue-400">Œil Droit (OD)</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <FieldGroup label="SPH (D)">
-                      <NumberInput
-                        register={register}
-                        name="auto_od_sphere"
-                        rules={sphereRules}
-                        step={V.SPHERE.step}
-                        placeholder="-2.50"
-                      />
-                      <FieldError message={errors.auto_od_sphere?.message} />
-                    </FieldGroup>
-                    <FieldGroup label="CYL (D)">
-                      <NumberInput
-                        register={register}
-                        name="auto_od_cylindre"
-                        rules={cylindreRules}
-                        step={V.CYLINDRE.step}
-                        placeholder="-0.75"
-                      />
-                      <FieldError message={errors.auto_od_cylindre?.message} />
-                    </FieldGroup>
-                    <FieldGroup label="AXE (°)">
-                      <NumberInput
-                        register={register}
-                        name="auto_od_axe"
-                        rules={axeRules}
-                        step={1}
-                        placeholder="170"
-                      />
-                      <FieldError message={errors.auto_od_axe?.message} />
-                    </FieldGroup>
-                  </div>
-                </div>
-
-                <div className="space-y-2 p-3 bg-neutral-50 dark:bg-neutral-800/40 rounded-lg">
-                  <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Œil Gauche (OG)</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <FieldGroup label="SPH (D)">
-                      <NumberInput
-                        register={register}
-                        name="auto_og_sphere"
-                        rules={sphereRules}
-                        step={V.SPHERE.step}
-                        placeholder="-2.00"
-                      />
-                      <FieldError message={errors.auto_og_sphere?.message} />
-                    </FieldGroup>
-                    <FieldGroup label="CYL (D)">
-                      <NumberInput
-                        register={register}
-                        name="auto_og_cylindre"
-                        rules={cylindreRules}
-                        step={V.CYLINDRE.step}
-                        placeholder="-1.00"
-                      />
-                      <FieldError message={errors.auto_og_cylindre?.message} />
-                    </FieldGroup>
-                    <FieldGroup label="AXE (°)">
-                      <NumberInput
-                        register={register}
-                        name="auto_og_axe"
-                        rules={axeRules}
-                        step={1}
-                        placeholder="5"
-                      />
-                      <FieldError message={errors.auto_og_axe?.message} />
-                    </FieldGroup>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-3 uppercase tracking-wide">
                 Réfraction subjective
               </p>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1554,65 +1419,6 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
                 </div>
               </div>
             </div>
-
-            <div>
-              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-3 uppercase tracking-wide">
-                Distance pupillaire (DP)
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FieldGroup label="DP OD (mm)">
-                  <NumberInput register={register} name="dp_od" rules={dpRules} step={V.DP.step} placeholder="32.0" />
-                  <FieldError message={errors.dp_od?.message} />
-                </FieldGroup>
-                <FieldGroup label="DP OG (mm)">
-                  <NumberInput register={register} name="dp_og" rules={dpRules} step={V.DP.step} placeholder="31.5" />
-                  <FieldError message={errors.dp_og?.message} />
-                </FieldGroup>
-                <FieldGroup label="DP Binoculaire (mm)">
-                  <NumberInput
-                    register={register}
-                    name="dp_binoculaire"
-                    rules={{
-                      min: { value: 50, message: 'Min 50 mm' },
-                      max: { value: 80, message: 'Max 80 mm' },
-                    }}
-                    step={0.5}
-                    placeholder="63.5"
-                  />
-                  <FieldError message={errors.dp_binoculaire?.message} />
-                </FieldGroup>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-3 uppercase tracking-wide">
-                Pression intraoculaire (PIO)
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FieldGroup label="PIO OD (mmHg)">
-                  <NumberInput register={register} name="pio_od" rules={pioRules} step={V.PIO.step} placeholder="15.0" />
-                  <FieldError message={errors.pio_od?.message} />
-                </FieldGroup>
-                <FieldGroup label="PIO OG (mmHg)">
-                  <NumberInput register={register} name="pio_og" rules={pioRules} step={V.PIO.step} placeholder="16.0" />
-                  <FieldError message={errors.pio_og?.message} />
-                </FieldGroup>
-                <FieldGroup label="Méthode PIO">
-                  <SelectInput
-                    register={register}
-                    name="methode_pio"
-                    options={METHODE_PIO_OPTIONS}
-                    placeholder="Méthode"
-                  />
-                </FieldGroup>
-              </div>
-              {(watch('pio_od') > 21 || watch('pio_og') > 21) && (
-                <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
-                  <AlertTriangle size={14} />
-                  PIO &gt; 21 mmHg – Risque de glaucome (ISO 14971)
-                </div>
-              )}
-            </div>
           </div>
         )}
       </div>
@@ -1748,14 +1554,6 @@ export default function BilanForm({ patientId, onSaved, existingData, examenId }
               />
             </FieldGroup>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FieldGroup label="Fond d'œil">
-                <TextArea register={register} name="fond_oeil" placeholder="Normal, rétinopathie..." rows={2} />
-              </FieldGroup>
-              <FieldGroup label="Biomicroscopie (LAF)">
-                <TextArea register={register} name="biomicroscopie" placeholder="Cornée, cristallin..." rows={2} />
-              </FieldGroup>
-            </div>
           </div>
         )}
       </div>

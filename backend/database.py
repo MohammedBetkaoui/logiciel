@@ -91,6 +91,8 @@ EXAMENS_EXTRA_COLUMNS = {
     "phorie_vl_v": "REAL",
     "phorie_vp_h": "REAL",
     "phorie_vp_v": "REAL",
+    "phorie_associee_vl": "TEXT",
+    "phorie_associee_vp": "TEXT",
     "lead_lag_valeur": "REAL",
     "lead_lag_reference": "TEXT",
     "arn_valeur": "REAL",
