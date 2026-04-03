@@ -129,6 +129,10 @@ const EXTENDED_GROUP_ORDER = [
 function categorizeExtendedField(key) {
   if (!key) return 'Autres informations';
 
+  if (key === 'groupe') {
+    return 'Anamnèse';
+  }
+
   if (
     key.startsWith('motif_') ||
     key === 'dernier_examen_ophtalmo' ||
@@ -205,6 +209,7 @@ function categorizeExtendedField(key) {
 }
 
 const NEW_BILAN_FIELDS = [
+  'groupe',
   'motif_consultation', 'dernier_examen_ophtalmo', 'fonction_patient', 'loisir_patient',
   'symptomes_visuels', 'symptomes_oculaires', 'traitement_actuel', 'port_lunettes',
   'port_lentilles', 'port_reeducation', 'comp_actuelle_od_sph', 'comp_actuelle_od_cyl',

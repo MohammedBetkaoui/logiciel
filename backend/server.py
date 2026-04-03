@@ -110,6 +110,7 @@ class ExamenCreate(BaseModel):
 
     patient_id: int
     praticien: str
+    groupe: Optional[str] = None
     date_examen: Optional[str] = None
     av_od_sc: Optional[float] = None
     av_og_sc: Optional[float] = None
@@ -139,7 +140,7 @@ class ExamenCreate(BaseModel):
     dp_binoculaire: Optional[float] = None
     pio_od: Optional[float] = None
     pio_og: Optional[float] = None
-    methode_pio: str = "tonometre_air"
+    methode_pio: Optional[str] = None
     motilite_oculaire: Optional[str] = None
     cover_test: Optional[str] = None
     test_couleurs: Optional[str] = None

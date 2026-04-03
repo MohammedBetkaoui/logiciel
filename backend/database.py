@@ -11,9 +11,10 @@ from datetime import datetime
 
 logger = logging.getLogger("bbadata.db")
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 EXAMENS_EXTRA_COLUMNS = {
+    "groupe": "TEXT",
     # Anamnese
     "motif_consultation": "TEXT",
     "dernier_examen_ophtalmo": "TEXT",
@@ -388,7 +389,7 @@ def init_database(db_path: str = "data/bbadata.db") -> sqlite3.Connection:
     if not existing or existing < SCHEMA_VERSION:
         conn.execute(
             "INSERT INTO schema_version (version, description) VALUES (?, ?)",
-            (SCHEMA_VERSION, "Extension du schéma examens – nouveaux champs bilan optométrique"),
+            (SCHEMA_VERSION, "Mise à jour schéma examens – alignement formulaire et import CSV"),
         )
         conn.commit()
 

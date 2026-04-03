@@ -18,7 +18,7 @@ import {
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
-// ─── Mapping colonnes CSV attendues (Bilan Complet étendu) ──
+// ─── Mapping colonnes CSV attendues (Bilan Complet aligné au formulaire) ──
 const PATIENT_COLUMNS_COMPLET = [
   'nom',
   'prenom',
@@ -30,26 +30,21 @@ const PATIENT_COLUMNS_COMPLET = [
 ];
 
 const EXAMEN_IMPORT_COLUMNS = [
-  'date_examen', 'praticien',
+  'date_examen', 'praticien', 'groupe',
   'motif_consultation', 'dernier_examen_ophtalmo', 'fonction_patient', 'loisir_patient',
   'symptomes_visuels', 'symptomes_oculaires', 'traitement_actuel',
   'port_lunettes', 'port_lentilles', 'port_reeducation',
-  'comp_actuelle_od_sph', 'comp_actuelle_od_cyl', 'comp_actuelle_od_axe', 'comp_actuelle_od_add', 'comp_actuelle_od_prisme', 'comp_actuelle_od_base',
-  'comp_actuelle_og_sph', 'comp_actuelle_og_cyl', 'comp_actuelle_og_axe', 'comp_actuelle_og_add', 'comp_actuelle_og_prisme', 'comp_actuelle_og_base',
   'pathologie_oculaire_presence', 'pathologie_oculaire_description',
   'sante_maladie_presence', 'sante_maladie_detail',
   'sante_medicament_presence', 'sante_medicament_detail',
   'sante_allergie_presence', 'sante_allergie_detail',
   'hypothese_clinique',
-  'harmon_cm', 'revip_cm', 'ppc_pb_cm', 'ppc_pr_cm',
+  'harmon_cm', 'revip_cm', 'ppc_pb_cm',
   'motilite_oculaire', 'reflexe_lumiere_mm', 'reflexe_penombre_mm',
   'perrla', 'perrla_remarque',
   'champ_vision_preliminaire',
   'vision_couleurs_methode', 'vision_couleurs_od', 'vision_couleurs_og', 'vision_couleurs_odg',
-  'champ_visuel',
   'cover_uni_vl', 'cover_uni_vp', 'cover_alt_vl', 'cover_alt_vp',
-  'av_brute_vl_od', 'av_brute_vl_og', 'av_brute_vl_odg',
-  'av_brute_vp_od', 'av_brute_vp_og', 'av_brute_vp_odg',
   'ancien_od_sph', 'ancien_od_cyl', 'ancien_od_axe',
   'ancien_og_sph', 'ancien_og_cyl', 'ancien_og_axe',
   'ecart_pupillaire_vl_mm', 'ecart_pupillaire_vp_mm',
@@ -70,13 +65,9 @@ const EXAMEN_IMPORT_COLUMNS = [
   'zone_vl_points', 'zone_vp_points',
   'critere_sheard', 'critere_percival',
   'av_od_sc', 'av_og_sc', 'av_od_ac', 'av_og_ac', 'av_binoculaire',
-  'auto_od_sphere', 'auto_od_cylindre', 'auto_od_axe',
-  'auto_og_sphere', 'auto_og_cylindre', 'auto_og_axe',
   'rx_od_sphere', 'rx_od_cylindre', 'rx_od_axe', 'rx_od_addition', 'rx_od_prisme', 'rx_od_base_prisme',
   'rx_og_sphere', 'rx_og_cylindre', 'rx_og_axe', 'rx_og_addition', 'rx_og_prisme', 'rx_og_base_prisme',
-  'dp_od', 'dp_og', 'dp_binoculaire',
-  'pio_od', 'pio_og', 'methode_pio',
-  'cover_test', 'test_couleurs', 'fond_oeil', 'biomicroscopie',
+  'cover_test', 'test_couleurs', 'champ_visuel',
   'prescription_finale_od_sph', 'prescription_finale_od_cyl', 'prescription_finale_od_axe', 'prescription_finale_od_prisme', 'prescription_finale_od_base',
   'prescription_finale_og_sph', 'prescription_finale_og_cyl', 'prescription_finale_og_axe', 'prescription_finale_og_prisme', 'prescription_finale_og_base',
   'prescription_finale_addition', 'prescription_finale_distance_lecture_cm',
@@ -89,9 +80,24 @@ const EXAMEN_IMPORT_COLUMNS = [
   'interpretation_flex_statut', 'interpretation_flex_valeur',
   'interpretation_rf_statut', 'interpretation_rf_valeur',
   'diagnostic', 'observations',
-  // Compatibilite anciens fichiers
+];
+
+// Compatibilite anciens fichiers (anciens templates)
+const LEGACY_EXAMEN_IMPORT_COLUMNS = [
+  'comp_actuelle_od_sph', 'comp_actuelle_od_cyl', 'comp_actuelle_od_axe', 'comp_actuelle_od_add', 'comp_actuelle_od_prisme', 'comp_actuelle_od_base',
+  'comp_actuelle_og_sph', 'comp_actuelle_og_cyl', 'comp_actuelle_og_axe', 'comp_actuelle_og_add', 'comp_actuelle_og_prisme', 'comp_actuelle_og_base',
+  'ppc_pr_cm',
+  'av_brute_vl_od', 'av_brute_vl_og', 'av_brute_vl_odg',
+  'av_brute_vp_od', 'av_brute_vp_og', 'av_brute_vp_odg',
+  'auto_od_sphere', 'auto_od_cylindre', 'auto_od_axe',
+  'auto_og_sphere', 'auto_og_cylindre', 'auto_og_axe',
+  'dp_od', 'dp_og', 'dp_binoculaire',
+  'pio_od', 'pio_og', 'methode_pio',
+  'fond_oeil', 'biomicroscopie',
   'antecedents_oculaires', 'antecedents_generaux', 'port_actuel',
 ];
+
+const SUPPORTED_EXAMEN_IMPORT_COLUMNS = [...EXAMEN_IMPORT_COLUMNS, ...LEGACY_EXAMEN_IMPORT_COLUMNS];
 
 const EXPECTED_COLUMNS = [...PATIENT_COLUMNS_COMPLET, ...EXAMEN_IMPORT_COLUMNS];
 
@@ -573,7 +579,7 @@ export default function ImportCSV() {
           praticien: normalizeCsvString(row.praticien) || 'Import CSV',
         };
 
-        for (const field of EXAMEN_IMPORT_COLUMNS) {
+        for (const field of SUPPORTED_EXAMEN_IMPORT_COLUMNS) {
           if (field === 'praticien') continue;
           if (!(field in row)) continue;
 
